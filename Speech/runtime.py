@@ -173,9 +173,8 @@ def diarize(context: Files, model: Model, *, device='auto', speakers=0, min_spea
             arguments += ['--' + key.replace('_', '-'), str(value)]
         invoke('SpeakerDiarization', arguments, ai_root=ai_root, cancel_check=cancel_check)
         data = read_result(result_path, context, model=model)
-    if rttm:
-        publish(context, rttm_path, '.rttm')
-    return str(result_path), len(data['speakers'])
+    rttm_export = publish(context, rttm_path, '.rttm') if rttm else None
+    return str(result_path), len(data['speakers']), rttm_export
 
 
 def extract(context: Files, model: Model, *, start=0.0, end=0.0, device='auto', ai_root=AI_ROOT, cancel_check=None):

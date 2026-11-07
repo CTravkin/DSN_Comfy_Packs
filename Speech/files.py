@@ -68,34 +68,33 @@ def setup_files(media_path: str, output_directory: str = '',
     stamp = (now or datetime.now().astimezone()).strftime('%Y-%m-%d %H-%M')
     stem = safe_name(' '.join(x for x in (stamp if include_datetime else '', user_name) if x) or source.stem)
     fingerprint = sha256(source)
-    output.mkdir(parents=True, exist_ok=True)
-    for index in range(1, 10000):
-        basename = stem if index == 1 else f'{stem} ({index})'
-        directory = output / basename
-        try:
-            directory.mkdir()
-            (directory / 'Data').mkdir()
-            return Files(source, fingerprint, directory, basename)
-        except FileExistsError:
-            continue
-    raise FileExistsError('Не удалось выделить папку результата')
+    context = Files(source, fingerprint, output / stem, stem)
+    context.directory.mkdir(parents=True, exist_ok=True)
+    if context.directory.resolve() != context.directory:
+        raise ValueError('Папка результата должна быть обычным каталогом')
+    context.data.mkdir(exist_ok=True)
+    if context.data.resolve() != context.data:
+        raise ValueError('Data должен быть обычным каталогом')
+    return context
 
 
 def publish(context: Files, source: Path, extension: str) -> Path:
     context.validate_source()
     if not re.fullmatch(r'(?:\.[\w-]+)+', extension):
         raise ValueError('Недопустимое расширение результата')
-    target = context.directory / (context.name + extension)
-    created = False
-    try:
-        with source.open('rb') as original:
-            with target.open('xb') as destination:
-                created = True
-                shutil.copyfileobj(original, destination)
-    except FileExistsError:
-        raise FileExistsError(f'Экспорт уже существует: {target.name}; для повторного экспорта требуется отдельный запуск') from None
-    except BaseException:
-        if created:
-            target.unlink(missing_ok=True)
-        raise
-    return target
+    with source.open('rb') as original:
+        for index in range(1, 10000):
+            name = context.name if index == 1 else f'{context.name} ({index})'
+            target = context.directory / (name + extension)
+            try:
+                destination = target.open('xb')
+            except FileExistsError:
+                continue
+            try:
+                with destination:
+                    shutil.copyfileobj(original, destination)
+            except BaseException:
+                target.unlink(missing_ok=True)
+                raise
+            return target
+    raise FileExistsError('Не удалось подобрать свободное имя файла для экспорта')

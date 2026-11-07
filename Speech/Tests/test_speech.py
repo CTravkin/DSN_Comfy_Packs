@@ -54,12 +54,13 @@ class SpeechTests(unittest.TestCase):
         self.assertEqual(self.setup_files(name='Проверка', include_datetime=False).name, 'Проверка')
         self.assertEqual(self.setup_files(name='', include_datetime=False).name, 'Запись & проба')
 
-    def test_same_minute_runs_do_not_replace_existing_results(self):
+    def test_same_minute_runs_share_folder_and_keep_separate_stage_files(self):
         first = self.setup_files(name='', include_datetime=True)
-        marker = first.directory / 'keep.txt'
+        marker = first.stage('recognition') / 'keep.txt'
         marker.write_text('existing', encoding='utf-8')
         second = self.setup_files(name='', include_datetime=True)
-        self.assertNotEqual(first.directory, second.directory)
+        self.assertEqual(first.directory, second.directory)
+        self.assertNotEqual(marker.parent, second.stage('recognition'))
         self.assertEqual(marker.read_text(), 'existing')
 
     def test_names_cannot_escape_output_directory(self):
@@ -73,15 +74,16 @@ class SpeechTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'измен'):
             context.validate_source()
 
-    def test_exports_never_overwrite_existing_files(self):
-        context = self.setup_files()
-        source = context.data / 'result.txt'
-        source.write_text('first', encoding='utf-8')
-        self.files.publish(context, source, '.txt')
-        source.write_text('second', encoding='utf-8')
-        with self.assertRaises(FileExistsError):
-            self.files.publish(context, source, '.txt')
-        self.assertEqual((context.directory / (context.name + '.txt')).read_text(encoding='utf-8'), 'first')
+    def test_exports_add_numbers_before_the_complete_extension(self):
+        context = self.setup_files(name='Проверка', include_datetime=False)
+        source = context.data / 'result.json'
+        names = ['Проверка.voiceprint.json', 'Проверка (2).voiceprint.json', 'Проверка (3).voiceprint.json']
+        for name in names:
+            source.write_text(name, encoding='utf-8')
+            exported = self.files.publish(context, source, '.voiceprint.json')
+            self.assertEqual(exported, context.directory / name)
+        for name in names:
+            self.assertEqual((context.directory / name).read_text(encoding='utf-8'), name)
 
     def test_missing_stage_source_cannot_delete_an_existing_export(self):
         context = self.setup_files()
@@ -175,7 +177,7 @@ class SpeechTests(unittest.TestCase):
                 expected = Path(configured) if configured.strip() else self.root / 'Data' / 'Speakers'
                 self.assertEqual(actual, expected.resolve())
 
-    def test_reused_diarization_can_export_rttm_without_old_export(self):
+    def test_reused_diarization_returns_the_new_numbered_rttm_path(self):
         context = self.setup_files()
         model = self.catalog.Model('owner/pipeline', 'Pipeline', 'diarization', self.root, 'rev', {})
         existing = self.root / 'existing.json'
@@ -183,10 +185,13 @@ class SpeechTests(unittest.TestCase):
             'model': str(self.root), 'parameters': {}, 'speakers': ['SPEAKER_00'],
             'segments': [{'start': 1.25, 'end': 2.75, 'speaker': 'SPEAKER_00'}],
             'outputs': {'rttm': str(self.root / 'missing.rttm')}}), encoding='utf-8')
-        path, count = self.runtime.diarize(context, model, existing_json=str(existing), rttm=True, ai_root=self.root)
+        old_rttm = context.directory / (context.name + '.rttm')
+        old_rttm.write_text('previous', encoding='utf-8')
+        _, count, exported = self.runtime.diarize(context, model, existing_json=str(existing), rttm=True, ai_root=self.root)
         self.assertEqual(count, 1)
-        text = (context.directory / (context.name + '.rttm')).read_text(encoding='utf-8')
-        self.assertIn('1.250 1.500 <NA> <NA> SPEAKER_00', text)
+        self.assertEqual(exported, context.directory / (context.name + ' (2).rttm'))
+        self.assertEqual(old_rttm.read_text(encoding='utf-8'), 'previous')
+        self.assertIn('1.250 1.500 <NA> <NA> SPEAKER_00', exported.read_text(encoding='utf-8'))
 
     def test_runner_preserves_literal_arguments_and_enforces_offline_mode(self):
         cli = self.root / 'fake CLI.py'

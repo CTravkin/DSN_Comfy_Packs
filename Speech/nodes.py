@@ -64,13 +64,13 @@ class FileSetup(io.ComfyNode):
         return schema('FileSetup', 'File Setup', [
             io.String.Input('media_path', display_name='Исходный файл', default='', tooltip='Путь к записи или JSON отпечатка для сравнения, исходный файл остается на месте'),
             io.String.Input('output_directory', display_name='Каталог результатов', default='', advanced=True,
-                            tooltip='Каталог, в котором создается папка запуска; пустое поле означает Output Comfy'),
-            io.String.Input('name', display_name='Имя результата', default='', tooltip='Общее имя папки и основных файлов; пустое поле допускается'),
+                            tooltip='Родительский каталог папки запуска, пустое поле означает Output Comfy'),
+            io.String.Input('name', display_name='Имя результата', default='', tooltip='Общее имя папки и основных файлов, при совпадении имени файла добавляется номер'),
             boolean('include_datetime', 'Дата и время в имени', True,
                     tooltip='Дата и время добавляются к имени папки запуска и основных файлов'),
         ], [FileContext.Output('files', display_name='Работа с файлами'),
             string_output('directory', 'Каталог результатов'), string_output('source', 'Исходный файл')],
-            'Настройка источника и общего каталога запуска; дата и время фиксируются один раз, предыдущие результаты сохраняются.',
+            'Настройка источника и общей папки, при совпадении имени папка используется повторно, файлы с занятыми именами сохраняются с номером.',
             ['файл', 'сохранение', 'источник'], output=False)
 
     @classmethod
@@ -139,8 +139,9 @@ class SpeakerDiarization(io.ComfyNode):
 
     @classmethod
     def execute(cls, files, model, speakers=0, rttm=False, device='Автоматически', min_speakers=0, max_speakers=0, existing_json=''):
-        path, count = heavy(runtime.diarize, files, catalog.select_model(model, 'diarization'), device=DEVICES[device],
-                            speakers=speakers, min_speakers=min_speakers, max_speakers=max_speakers, rttm=rttm, existing_json=existing_json)
+        path, count, rttm_export = heavy(runtime.diarize, files, catalog.select_model(model, 'diarization'),
+            device=DEVICES[device], speakers=speakers, min_speakers=min_speakers, max_speakers=max_speakers,
+            rttm=rttm, existing_json=existing_json)
         summary = f'Найдено спикеров: {count}'
         try:
             segments = runtime.read_result(runtime.read_path(path))['segments']
@@ -148,8 +149,8 @@ class SpeakerDiarization(io.ComfyNode):
         except (OSError, KeyError, TypeError, ValueError):
             lines = []
         artifacts = [path]
-        if rttm:
-            artifacts.append(files.directory / (files.name + '.rttm'))
+        if rttm_export:
+            artifacts.append(rttm_export)
         return io.NodeOutput(path, count, ui=results.presentation(cls, files, summary, artifacts,
             text='\n'.join(lines) or 'Речевые интервалы не найдены', detail=summary))
 
