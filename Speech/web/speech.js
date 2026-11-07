@@ -1,6 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
+import { installAppHelp } from "./app-help.js";
 import { currentResult, installResultActions, refreshResultActions, showNodeResult } from "./results.js";
 
 // Display order only; widget positions and numbered sockets in saved graphs stay stable.
@@ -98,6 +99,15 @@ function appInputNodeId(key, graphId) {
     if (parts.length === 3 && parts[0] === graphId) return parts[1];
 }
 
+function appWidgetTooltip(key) {
+    const graph = app.rootGraph;
+    if (!key || !graph) return;
+    const id = appInputNodeId(key, graph.id);
+    if (id === undefined) return;
+    const type = graph.getNodeById(id)?.type;
+    return inputSpecs.get(type)?.[key.split(":").at(-1)]?.[1]?.tooltip;
+}
+
 function restoreAdvancedNodes() {
     for (const node of appAdvancedNodes) node.showAdvanced = false;
     appAdvancedNodes.clear();
@@ -131,6 +141,7 @@ app.registerExtension({
     async setup() {
         installNodeLayout();
         installResultActions(fields);
+        installAppHelp(appWidgetTooltip);
         new MutationObserver(syncAppAdvancedWidgets).observe(document.body, { childList: true, subtree: true });
         syncAppAdvancedWidgets();
         // Adapt only our category. Other model libraries and metadata stay native.
