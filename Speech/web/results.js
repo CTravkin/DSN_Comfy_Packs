@@ -21,30 +21,35 @@ function element(tag, text) {
 
 function resultActions(result, inApp) {
     const section = element("section");
-    section.className = "speech-result-actions";
-    const title = inApp ? "Файлы последнего запуска" : result.summary;
-    section.append(element("strong", title));
-    const list = element("div");
+    section.className = "speech-result-actions font-inter text-sm";
+    const heading = element("h3", inApp ? "Результат" : result.summary);
+    heading.className = "font-semibold text-base-foreground";
+    const folder = element("div", result.directory);
+    folder.className = "speech-result-path text-muted-foreground";
+    section.append(heading, folder);
+    const list = element("ul");
     list.className = "speech-result-files";
     for (const { name, file } of result.exports) {
+        const row = element("li");
+        list.append(row);
         if (!file || file.type !== "output") {
-            list.append(element("span", name));
+            row.textContent = name;
             continue;
         }
         const query = new URLSearchParams({ filename: file.filename, subfolder: file.subfolder, type: file.type });
         const link = element("a", name);
         link.href = api.apiURL(`/view?${query}`);
         link.download = name;
-        list.append(link);
+        link.className = "text-base-foreground underline hover:text-muted-foreground";
+        row.append(link);
     }
-    section.append(list);
-    const folder = element("small", result.directory);
-    folder.title = result.directory;
-    section.append(folder);
+    if (result.exports.length) section.append(list);
     if (result.folder_token && localHosts.has(location.hostname)) {
         const button = element("button", "Открыть папку");
         button.type = "button";
+        button.className = "inline-flex h-8 items-center justify-center rounded-md bg-secondary-background px-3 font-medium text-base-foreground transition-colors hover:bg-secondary-background-hover focus-visible:ring-1 focus-visible:ring-border-default focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
         const status = element("small");
+        status.className = "text-muted-foreground";
         status.setAttribute("role", "status");
         button.addEventListener("click", async () => {
             button.disabled = true;
@@ -104,10 +109,9 @@ export function installResultActions(speechNodes) {
     const style = element("style");
     style.textContent = `
         .speech-result-actions { display: flex; flex-direction: column; align-items: flex-start; gap: .35rem; padding: .5rem .75rem; overflow: hidden; }
-        .speech-result-actions small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .speech-result-files { display: flex; flex-wrap: wrap; gap: .25rem .75rem; overflow-wrap: anywhere; }
-        .speech-result-files a { text-decoration: underline; }
-        .speech-result-actions button { font: inherit; cursor: pointer; border: 1px solid currentColor; border-radius: .35rem; padding: .2rem .5rem; }
+        .speech-result-path, .speech-result-files { max-width: 100%; overflow-wrap: anywhere; }
+        .speech-result-files { display: grid; gap: .15rem; margin: 0; padding-inline-start: .85rem; list-style: none; }
+        .speech-result-actions [role="status"]:empty { display: none; }
         ${panelSelector} > .speech-result-actions { margin: 3.25rem .75rem 0; flex-shrink: 0; position: relative; z-index: 2; border: 1px solid var(--color-border-subtle); border-radius: .5rem; }
     `;
     document.head.append(style);
