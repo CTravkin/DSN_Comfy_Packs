@@ -1,5 +1,5 @@
 {
-  "id": "173b5699-22eb-4627-b9a7-b42b15dc9662",
+  "id": "47f06f94-08b3-474f-9b0d-91d854343c59",
   "revision": 0,
   "last_node_id": 3,
   "last_link_id": 3,
@@ -108,14 +108,14 @@
     },
     {
       "id": 2,
-      "type": "WhisperTranscribe",
+      "type": "SpeakerDiarization",
       "pos": [
         1210,
         440
       ],
       "size": [
         480,
-        610
+        340
       ],
       "flags": {},
       "order": 1,
@@ -130,8 +130,8 @@
           "link": 1
         },
         {
-          "label": "Модель",
-          "localized_name": "Модель",
+          "label": "Модель разметки",
+          "localized_name": "Модель разметки",
           "name": "model",
           "type": "COMBO",
           "widget": {
@@ -140,62 +140,22 @@
           "link": null
         },
         {
-          "label": "Язык",
-          "localized_name": "Язык",
-          "name": "language",
-          "type": "COMBO",
+          "label": "Число спикеров",
+          "localized_name": "Число спикеров",
+          "name": "speakers",
+          "type": "INT",
           "widget": {
-            "name": "language"
+            "name": "speakers"
           },
           "link": null
         },
         {
-          "label": "Задача",
-          "localized_name": "Задача",
-          "name": "task",
-          "type": "COMBO",
-          "widget": {
-            "name": "task"
-          },
-          "link": null
-        },
-        {
-          "label": "Сохранить JSON",
-          "localized_name": "Сохранить JSON",
-          "name": "save_json",
+          "label": "Сохранить RTTM",
+          "localized_name": "Сохранить RTTM",
+          "name": "rttm",
           "type": "BOOLEAN",
           "widget": {
-            "name": "save_json"
-          },
-          "link": null
-        },
-        {
-          "label": "Сохранить TXT",
-          "localized_name": "Сохранить TXT",
-          "name": "save_text",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "save_text"
-          },
-          "link": null
-        },
-        {
-          "label": "Субтитры SRT",
-          "localized_name": "Субтитры SRT",
-          "name": "srt",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "srt"
-          },
-          "link": null
-        },
-        {
-          "label": "Субтитры VTT",
-          "localized_name": "Субтитры VTT",
-          "name": "vtt",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "vtt"
+            "name": "rttm"
           },
           "link": null
         },
@@ -210,30 +170,30 @@
           "link": null
         },
         {
-          "label": "Имена и термины",
-          "localized_name": "Имена и термины",
-          "name": "prompt",
+          "label": "Минимум спикеров",
+          "localized_name": "Минимум спикеров",
+          "name": "min_speakers",
           "shape": 7,
-          "type": "STRING",
+          "type": "INT",
           "widget": {
-            "name": "prompt"
+            "name": "min_speakers"
           },
           "link": null
         },
         {
-          "label": "Код языка",
-          "localized_name": "Код языка",
-          "name": "language_code",
+          "label": "Максимум спикеров",
+          "localized_name": "Максимум спикеров",
+          "name": "max_speakers",
           "shape": 7,
-          "type": "STRING",
+          "type": "INT",
           "widget": {
-            "name": "language_code"
+            "name": "max_speakers"
           },
           "link": null
         },
         {
-          "label": "Готовый результат",
-          "localized_name": "Готовый результат",
+          "label": "Готовая разметка",
+          "localized_name": "Готовая разметка",
           "name": "existing_json",
           "shape": 7,
           "type": "STRING",
@@ -241,35 +201,13 @@
             "name": "existing_json"
           },
           "link": null
-        },
-        {
-          "label": "Ширина поиска",
-          "localized_name": "Ширина поиска",
-          "name": "beam_size",
-          "shape": 7,
-          "type": "INT",
-          "widget": {
-            "name": "beam_size"
-          },
-          "link": null
-        },
-        {
-          "label": "Фильтрация участков без речи",
-          "localized_name": "Фильтрация участков без речи",
-          "name": "vad",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "vad"
-          },
-          "link": null
         }
       ],
       "outputs": [
         {
-          "label": "Распознанная речь",
-          "localized_name": "Распознанная речь",
-          "name": "Распознанная речь",
+          "label": "Разметка спикеров",
+          "localized_name": "Разметка спикеров",
+          "name": "Разметка спикеров",
           "type": "STRING",
           "slot_index": 0,
           "links": [
@@ -277,66 +215,46 @@
           ]
         },
         {
-          "label": "Текст",
-          "localized_name": "Текст",
-          "name": "Текст",
-          "type": "STRING",
+          "label": "Найдено спикеров",
+          "localized_name": "Найдено спикеров",
+          "name": "Найдено спикеров",
+          "type": "INT",
           "slot_index": 1,
-          "links": null
-        },
-        {
-          "label": "Сохраненные файлы",
-          "localized_name": "Сохраненные файлы",
-          "name": "Сохраненные файлы",
-          "type": "STRING",
-          "slot_index": 2,
           "links": null
         }
       ],
       "properties": {
-        "Node name for S&R": "WhisperTranscribe"
+        "Node name for S&R": "SpeakerDiarization"
       },
       "widgets_values": [
-        "Whisper Large V3 CT2",
-        "Автоматически",
-        "Распознать речь",
-        false,
-        false,
-        false,
+        "Pyannote Speaker Diarization Community 1",
+        0,
         false,
         "Автоматически",
-        "",
-        "",
-        "",
-        5,
-        true
+        0,
+        0,
+        ""
       ],
       "widgets_values_named": {
-        "model": "Whisper Large V3 CT2",
-        "language": "Автоматически",
-        "task": "Распознать речь",
-        "save_json": false,
-        "save_text": false,
-        "srt": false,
-        "vtt": false,
+        "model": "Pyannote Speaker Diarization Community 1",
+        "speakers": 0,
+        "rttm": false,
         "device": "Автоматически",
-        "prompt": "",
-        "language_code": "",
-        "existing_json": "",
-        "beam_size": 5,
-        "vad": true
+        "min_speakers": 0,
+        "max_speakers": 0,
+        "existing_json": ""
       }
     },
     {
       "id": 3,
-      "type": "SpeakerTranscript",
+      "type": "VoiceprintIdentify",
       "pos": [
         1810,
         240
       ],
       "size": [
         480,
-        380
+        280
       ],
       "flags": {},
       "order": 2,
@@ -351,14 +269,14 @@
           "link": 2
         },
         {
-          "label": "Распознанная речь",
-          "localized_name": "Распознанная речь",
-          "name": "recognition_json",
-          "type": "STRING",
+          "label": "Модель голосовых отпечатков",
+          "localized_name": "Модель голосовых отпечатков",
+          "name": "model",
+          "type": "COMBO",
           "widget": {
-            "name": "recognition_json"
+            "name": "model"
           },
-          "link": 3
+          "link": null
         },
         {
           "label": "Разметка спикеров",
@@ -368,107 +286,79 @@
           "widget": {
             "name": "diarization_json"
           },
-          "link": null
+          "link": 3
         },
         {
-          "label": "Подтверждение имен",
-          "localized_name": "Подтверждение имен",
-          "name": "confirmed",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "confirmed"
-          },
-          "link": null
-        },
-        {
-          "label": "Сохранить JSON",
-          "localized_name": "Сохранить JSON",
-          "name": "save_json",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "save_json"
-          },
-          "link": null
-        },
-        {
-          "label": "Сохранить TXT",
-          "localized_name": "Сохранить TXT",
-          "name": "save_text",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "save_text"
-          },
-          "link": null
-        },
-        {
-          "label": "Карта имен",
-          "localized_name": "Карта имен",
-          "name": "speaker_map",
-          "shape": 7,
+          "label": "Эталоны голосов",
+          "localized_name": "Эталоны голосов",
+          "name": "reference_root",
           "type": "STRING",
           "widget": {
-            "name": "speaker_map"
+            "name": "reference_root"
           },
           "link": null
         },
         {
-          "label": "Объединять паузы, с",
-          "localized_name": "Объединять паузы, с",
-          "name": "max_gap",
+          "label": "Устройство",
+          "localized_name": "Устройство",
+          "name": "device",
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        },
+        {
+          "label": "Порог кандидата",
+          "localized_name": "Порог кандидата",
+          "name": "threshold",
           "shape": 7,
           "type": "FLOAT",
           "widget": {
-            "name": "max_gap"
+            "name": "threshold"
+          },
+          "link": null
+        },
+        {
+          "label": "Минимальный отрыв",
+          "localized_name": "Минимальный отрыв",
+          "name": "minimum_margin",
+          "shape": 7,
+          "type": "FLOAT",
+          "widget": {
+            "name": "minimum_margin"
           },
           "link": null
         }
       ],
       "outputs": [
         {
-          "label": "Транскрипт",
-          "localized_name": "Транскрипт",
-          "name": "Транскрипт",
+          "label": "Кандидаты по голосам",
+          "localized_name": "Кандидаты по голосам",
+          "name": "Кандидаты по голосам",
           "type": "STRING",
           "slot_index": 0,
-          "links": null
-        },
-        {
-          "label": "Текст",
-          "localized_name": "Текст",
-          "name": "Текст",
-          "type": "STRING",
-          "slot_index": 1,
-          "links": null
-        },
-        {
-          "label": "Сохраненные файлы",
-          "localized_name": "Сохраненные файлы",
-          "name": "Сохраненные файлы",
-          "type": "STRING",
-          "slot_index": 2,
           "links": null
         }
       ],
       "properties": {
-        "Node name for S&R": "SpeakerTranscript"
+        "Node name for S&R": "VoiceprintIdentify"
       },
       "widgets_values": [
+        "SPKRec ECAPA VoxCeleb",
         "",
         "",
-        false,
-        true,
-        true,
-        "",
-        1
+        "Автоматически",
+        0.25,
+        0.05
       ],
       "widgets_values_named": {
-        "recognition_json": "",
+        "model": "SPKRec ECAPA VoxCeleb",
         "diarization_json": "",
-        "confirmed": false,
-        "save_json": true,
-        "save_text": true,
-        "speaker_map": "",
-        "max_gap": 1
+        "reference_root": "",
+        "device": "Автоматически",
+        "threshold": 0.25,
+        "minimum_margin": 0.05
       }
     }
   ],
@@ -494,7 +384,7 @@
       2,
       0,
       3,
-      1,
+      2,
       "STRING"
     ]
   ],
@@ -507,7 +397,61 @@
         -120,
         16
       ]
-    }
+    },
+    "linearMode": true,
+    "linearData": {
+      "inputs": [
+        [
+          "47f06f94-08b3-474f-9b0d-91d854343c59:1:media_path",
+          "media_path"
+        ],
+        [
+          "47f06f94-08b3-474f-9b0d-91d854343c59:2:model",
+          "model"
+        ],
+        [
+          "47f06f94-08b3-474f-9b0d-91d854343c59:2:speakers",
+          "speakers"
+        ],
+        [
+          "47f06f94-08b3-474f-9b0d-91d854343c59:3:model",
+          "model"
+        ],
+        [
+          "47f06f94-08b3-474f-9b0d-91d854343c59:3:threshold",
+          "threshold"
+        ],
+        [
+          "47f06f94-08b3-474f-9b0d-91d854343c59:3:minimum_margin",
+          "minimum_margin"
+        ],
+        [
+          "47f06f94-08b3-474f-9b0d-91d854343c59:1:name",
+          "name"
+        ],
+        [
+          "47f06f94-08b3-474f-9b0d-91d854343c59:1:include_datetime",
+          "include_datetime"
+        ],
+        [
+          "47f06f94-08b3-474f-9b0d-91d854343c59:2:rttm",
+          "rttm"
+        ]
+      ],
+      "outputs": [
+        3
+      ]
+    },
+    "speech_result_groups": [
+      [
+        3,
+        "Кандидаты по голосам"
+      ],
+      [
+        2,
+        "Разметка спикеров"
+      ]
+    ]
   },
   "version": 0.4
 }

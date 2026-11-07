@@ -37,3 +37,21 @@ class ResultTests(unittest.TestCase):
         self.assertFalse(allowed('127.0.0.1', 'http://127.0.0.1:8199'))
         self.assertFalse(allowed('127.0.0.1', 'https://example.test'))
         self.assertFalse(allowed('127.0.0.1', ''))
+
+    def test_nested_artifacts_keep_their_relative_paths_and_summary_stays_in_the_card(self):
+        with TemporaryDirectory() as scratch:
+            output = Path(scratch).resolve()
+            run = output / 'run'
+            stage = run / 'Data' / 'diarization'
+            stage.mkdir(parents=True)
+            artifact = stage / 'diarization.json'
+            artifact.write_text('{}', encoding='utf-8')
+            with patch.object(results.folder_paths, 'get_output_directory', return_value=str(output)):
+                payload = results.presentation(None, SimpleNamespace(directory=run), 'Сводка', [artifact],
+                                               detail='Найдено спикеров: 2')
+            card = json.loads(payload['speech_result'][0])
+            self.assertEqual(card['detail'], 'Найдено спикеров: 2')
+            self.assertEqual(card['exports'][0]['name'], 'Data/diarization/diarization.json')
+            self.assertEqual(payload['files'], [{
+                'type': 'output', 'subfolder': 'run/Data/diarization', 'filename': artifact.name,
+            }])

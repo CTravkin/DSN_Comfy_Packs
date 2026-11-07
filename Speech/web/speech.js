@@ -14,6 +14,9 @@ const fields = {
     VoiceprintCompare: "left right"
 };
 const category = "Speech";
+const inputSpecs = new Map();
+const appAdvancedNodes = new Set();
+let appWidgetList;
 const deviceLabels = { Видеокарта: "GPU (Видеокарта)", Процессор: "CPU (Процессор)" };
 const legacyLabels = {
     "Файл и сохранение": "Работа с файлами",
@@ -89,11 +92,47 @@ function catalog(refresh = false) {
     return catalogPromise;
 }
 
+function appInputNodeId(key, graphId) {
+    const parts = String(key).split(":");
+    if (parts.length === 1) return parts[0];
+    if (parts.length === 3 && parts[0] === graphId) return parts[1];
+}
+
+function restoreAdvancedNodes() {
+    for (const node of appAdvancedNodes) node.showAdvanced = false;
+    appAdvancedNodes.clear();
+}
+
+function syncAppAdvancedWidgets() {
+    const firstWidget = document.querySelector('[data-testid="app-mode-widget-item"]');
+    const list = firstWidget?.parentElement;
+    if (list === appWidgetList) return;
+    appWidgetList = list;
+    restoreAdvancedNodes();
+    if (!list) return;
+    const graph = app.rootGraph;
+    for (const row of list.querySelectorAll('[data-testid="app-mode-widget-item"]')) {
+        const key = row.dataset.widgetKey;
+        const name = key?.split(":").at(-1);
+        const id = appInputNodeId(key, graph.id);
+        if (id === undefined) continue;
+        const node = graph.getNodeById(id);
+        const spec = inputSpecs.get(node?.type)?.[name]?.[1];
+        if (!spec?.advanced || node.showAdvanced) continue;
+        appAdvancedNodes.add(node);
+        node.showAdvanced = true;
+        // App Mode renders a snapshot of the node state for each input.
+        graph.trigger("node:slot-label:changed", { nodeId: node.id, slotType: "input" });
+    }
+}
+
 app.registerExtension({
     name: "Speech.ModelsAndResults",
     async setup() {
         installNodeLayout();
         installResultActions(fields);
+        new MutationObserver(syncAppAdvancedWidgets).observe(document.body, { childList: true, subtree: true });
+        syncAppAdvancedWidgets();
         // Adapt only our category. Other model libraries and metadata stay native.
         const getModels = api.getModels.bind(api);
         api.getModels = async function(folder, ...args) {
@@ -114,8 +153,23 @@ app.registerExtension({
             console.warn("Библиотека моделей речи: соединение пока недоступно");
         }
     },
+    beforeConfigureGraph(graph) {
+        restoreAdvancedNodes();
+        appWidgetList = undefined;
+        const inputs = graph.extra?.linearData?.inputs;
+        if (!Array.isArray(inputs) || !inputs.length || !Array.isArray(graph.nodes)) return;
+        const nodes = new Map(graph.nodes.map(node => [String(node.id), node.type]));
+        for (const entry of inputs) {
+            if (!Array.isArray(entry)) continue;
+            const [key, name, config] = entry;
+            const nodeId = appInputNodeId(key, graph.id);
+            const tooltip = inputSpecs.get(nodes.get(nodeId))?.[name]?.[1]?.tooltip;
+            if (tooltip) entry[2] = { ...config, description: tooltip };
+        }
+    },
     afterConfigureGraph() {
         refreshResultActions();
+        queueMicrotask(syncAppAdvancedWidgets);
     },
     nodeCreated(node) {
         if (!Object.hasOwn(fields, node.comfyClass ?? node.type)) return;
@@ -124,6 +178,12 @@ app.registerExtension({
     },
     beforeRegisterNodeDef(nodeType, nodeData) {
         if (!Object.hasOwn(fields, nodeData.name)) return;
+        inputSpecs.set(nodeData.name, { ...nodeData.input.required, ...nodeData.input.optional });
+        const serialize = nodeType.prototype.onSerialize;
+        nodeType.prototype.onSerialize = function(info) {
+            serialize?.call(this, info);
+            if (appAdvancedNodes.has(this)) info.showAdvanced = false;
+        };
         const configure = nodeType.prototype.onConfigure;
         nodeType.prototype.onConfigure = function(info) {
             configure?.apply(this, arguments);
@@ -132,7 +192,12 @@ app.registerExtension({
             }
             for (const input of this.inputs ?? []) {
                 const spec = nodeData.input.required?.[input.name] ?? nodeData.input.optional?.[input.name];
-                updateLabel(input, spec?.[1]?.display_name);
+                const defaultLabel = spec?.[1]?.display_name;
+                updateLabel(input, defaultLabel);
+                if (input.label && input.label !== defaultLabel) {
+                    const widget = this.widgets?.find(item => item.name === input.widget?.name);
+                    if (widget) widget.label = input.label;
+                }
             }
             (this.outputs ?? []).forEach((output, index) => updateLabel(output, nodeData.output_name[index]));
             if (this.type === "VoiceprintIdentify" && info?.title === "Voiceprint Identify") {

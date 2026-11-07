@@ -8,6 +8,7 @@ const panelSelector = '[data-testid="linear-center-panel"]';
 let panel;
 let appActions;
 let viewKey;
+let resultPromptId;
 
 function newViewKey() {
     return Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join("");
@@ -19,20 +20,12 @@ function element(tag, text) {
     return item;
 }
 
-function resultActions(result, inApp) {
-    const section = element("section");
-    section.className = "speech-result-actions font-inter text-base-foreground";
-    if (inApp) section.classList.add("speech-result-card", "floating-panel");
-    const heading = element("h3", "Результат");
-    heading.className = "speech-result-heading";
-    const folder = element("div", result.directory);
-    folder.className = "speech-result-path";
-    section.append(heading, folder);
+function fileList(exports) {
     const list = element("ul");
     list.className = "speech-result-files";
-    for (const [index, { name, file }] of result.exports.entries()) {
+    for (const [index, { name, file }] of exports.entries()) {
         const row = element("li");
-        const branch = element("span", index === result.exports.length - 1 ? "└─" : "├─");
+        const branch = element("span", index === exports.length - 1 ? "└─" : "├─");
         branch.className = "speech-result-branch text-muted-foreground";
         branch.setAttribute("aria-hidden", "true");
         row.append(branch);
@@ -44,11 +37,36 @@ function resultActions(result, inApp) {
         const query = new URLSearchParams({ filename: file.filename, subfolder: file.subfolder, type: file.type });
         const link = element("a", name);
         link.href = api.apiURL(`/view?${query}`);
-        link.download = name;
+        link.download = file.filename;
         link.className = "speech-result-link";
         row.append(link);
     }
-    if (result.exports.length) section.append(list);
+    return list;
+}
+
+function resultActions(result, inApp) {
+    const section = element("section");
+    section.className = "speech-result-actions font-inter text-base-foreground";
+    if (inApp) section.classList.add("speech-result-card", "floating-panel");
+    const heading = element("h3", "Результат");
+    heading.className = "speech-result-heading";
+    section.append(heading);
+    if (result.detail) section.append(element("p", result.detail));
+    const folder = element("div", result.directory);
+    folder.className = "speech-result-path";
+    section.append(folder);
+    if (result.groups?.length) {
+        const groups = element("div");
+        groups.className = "speech-result-groups";
+        for (const { title, exports } of result.groups) {
+            const group = element("section");
+            group.append(element("h4", title), fileList(exports));
+            groups.append(group);
+        }
+        section.append(groups);
+    } else if (result.exports.length) {
+        section.append(fileList(result.exports));
+    }
     if (result.folder_token && localHosts.has(location.hostname)) {
         const button = element("button");
         button.type = "button";
@@ -86,8 +104,25 @@ function updateAppActions() {
     appActions?.remove();
     appActions = undefined;
     if (!panel) return;
-    const selected = app.rootGraph?.extra?.linearData?.outputs ?? [];
-    const result = selected.map(id => runs.get(String(id))).find(Boolean);
+    const extra = app.rootGraph?.extra;
+    const selected = (extra?.linearData?.outputs ?? []).map(id => runs.get(String(id)));
+    let result = selected.find(Boolean);
+    if (result && extra?.speech_result_groups?.length) {
+        const groups = [];
+        const seen = new Set();
+        for (const [id, title] of extra.speech_result_groups) {
+            const stage = runs.get(String(id));
+            if (stage?.directory !== result.directory) continue;
+            const exports = [];
+            for (const file of stage.exports) {
+                if (seen.has(file.name)) continue;
+                seen.add(file.name);
+                exports.push(file);
+            }
+            if (exports.length) groups.push({ title, exports });
+        }
+        result = { ...result, groups };
+    }
     if (result) {
         appActions = resultActions(result, true);
         panel.prepend(appActions);
@@ -122,8 +157,11 @@ export function installResultActions(speechNodes) {
             min-width: 0; padding: .375rem .5rem; font-size: .75rem; line-height: 1rem;
         }
         .speech-result-heading { margin: 0; font: inherit; font-weight: 500; }
+        .speech-result-actions > p { margin: 0; }
         .speech-result-path { max-width: 100%; overflow-wrap: anywhere; user-select: text; }
         .speech-result-files { display: grid; gap: .125rem; max-width: 100%; margin: 0; padding: 0; list-style: none; }
+        .speech-result-groups { display: grid; gap: .625rem; max-width: 100%; margin-block-start: .25rem; }
+        .speech-result-groups h4 { margin: 0 0 .125rem; font: inherit; font-weight: 600; }
         .speech-result-files > li { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .375rem; overflow-wrap: anywhere; }
         .speech-result-branch { font-family: var(--font-mono, monospace); user-select: none; }
         .speech-result-link { color: inherit; text-decoration: none; }
@@ -143,6 +181,10 @@ export function installResultActions(speechNodes) {
     api.addEventListener("executed", ({ detail }) => {
         const result = currentResult(detail.output);
         if (!result) return;
+        if (detail.prompt_id !== resultPromptId) {
+            runs.clear();
+            resultPromptId = detail.prompt_id;
+        }
         runs.set(String(detail.display_node ?? detail.node), result);
         updateAppActions();
     });
@@ -154,6 +196,7 @@ export function installResultActions(speechNodes) {
 
 export function refreshResultActions() {
     viewKey = newViewKey();
+    resultPromptId = undefined;
     runs.clear();
     queueMicrotask(updateAppActions);
 }

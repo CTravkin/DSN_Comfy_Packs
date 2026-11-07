@@ -53,7 +53,7 @@ def _preview(text: str) -> ui.SavedResult:
     return result
 
 
-def presentation(node, context, summary: str, artifacts=(), *, text: str | None = None):
+def presentation(node, context, summary: str, artifacts=(), *, text: str | None = None, detail: str = ''):
     directory = context.directory.resolve()
     output = Path(folder_paths.get_output_directory()).resolve()
     exports, native_files = [], []
@@ -63,13 +63,13 @@ def presentation(node, context, summary: str, artifacts=(), *, text: str | None 
         if not path.is_relative_to(directory) or path.suffix.lower() not in _FILE_SUFFIXES or not path.is_file():
             continue
         saved = _saved_file(path, output, io.FolderType.output)
-        exports.append({'name': path.name, 'file': saved})
+        exports.append({'name': path.relative_to(directory).as_posix(), 'file': saved})
         if saved:
             native_files.append(saved)
             has_saved_text |= path.suffix.lower() == '.txt'
-    if not has_saved_text or (text is not None and not text.strip()):
+    if text is not None and (not has_saved_text or not text.strip()):
         try:
-            native_files.insert(0, _preview(text or summary))
+            native_files.insert(0, _preview(text if text.strip() else summary))
         except OSError as error:
             logging.warning('Speech preview unavailable: %s', type(error).__name__)
     metadata = getattr(getattr(node, 'hidden', None), 'extra_pnginfo', None)
@@ -78,6 +78,7 @@ def presentation(node, context, summary: str, artifacts=(), *, text: str | None 
     result = {
         'view_key': extra.get('speech_view_key') if isinstance(extra, dict) else None,
         'summary': summary,
+        'detail': detail,
         'directory': str(directory),
         'exports': exports,
         'folder_token': _folder_token(directory),

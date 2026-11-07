@@ -215,6 +215,38 @@
         880,
         516
       ]
+    },
+    "linearMode": true,
+    "linearData": {
+      "inputs": [
+        [
+          "be5eb872-7e7e-4f56-861d-90e32eb8df8e:1:media_path",
+          "media_path"
+        ],
+        [
+          "be5eb872-7e7e-4f56-861d-90e32eb8df8e:2:model",
+          "model"
+        ],
+        [
+          "be5eb872-7e7e-4f56-861d-90e32eb8df8e:2:start",
+          "start"
+        ],
+        [
+          "be5eb872-7e7e-4f56-861d-90e32eb8df8e:2:end",
+          "end"
+        ],
+        [
+          "be5eb872-7e7e-4f56-861d-90e32eb8df8e:1:name",
+          "name"
+        ],
+        [
+          "be5eb872-7e7e-4f56-861d-90e32eb8df8e:1:include_datetime",
+          "include_datetime"
+        ]
+      ],
+      "outputs": [
+        2
+      ]
     }
   },
   "version": 0.4

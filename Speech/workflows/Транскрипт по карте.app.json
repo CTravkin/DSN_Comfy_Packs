@@ -1,8 +1,8 @@
 {
-  "id": "5f9a9f49-aa6f-473c-8732-1ab006fcf834",
+  "id": "173b5699-22eb-4627-b9a7-b42b15dc9662",
   "revision": 0,
-  "last_node_id": 2,
-  "last_link_id": 1,
+  "last_node_id": 3,
+  "last_link_id": 3,
   "nodes": [
     {
       "id": 1,
@@ -69,7 +69,8 @@
           "type": "SPEECH_FILES",
           "slot_index": 0,
           "links": [
-            1
+            1,
+            2
           ]
         },
         {
@@ -110,14 +111,14 @@
       "type": "WhisperTranscribe",
       "pos": [
         1210,
-        240
+        440
       ],
       "size": [
         480,
         610
       ],
       "flags": {},
-      "order": 3,
+      "order": 1,
       "mode": 0,
       "showAdvanced": false,
       "inputs": [
@@ -129,8 +130,8 @@
           "link": 1
         },
         {
-          "label": "Модель",
-          "localized_name": "Модель",
+          "label": "Модель распознавания",
+          "localized_name": "Модель распознавания",
           "name": "model",
           "type": "COMBO",
           "widget": {
@@ -271,7 +272,9 @@
           "name": "Распознанная речь",
           "type": "STRING",
           "slot_index": 0,
-          "links": null
+          "links": [
+            3
+          ]
         },
         {
           "label": "Текст",
@@ -297,9 +300,9 @@
         "Whisper Large V3 CT2",
         "Автоматически",
         "Распознать речь",
-        true,
-        true,
-        true,
+        false,
+        false,
+        false,
         false,
         "Автоматически",
         "",
@@ -312,9 +315,9 @@
         "model": "Whisper Large V3 CT2",
         "language": "Автоматически",
         "task": "Распознать речь",
-        "save_json": true,
-        "save_text": true,
-        "srt": true,
+        "save_json": false,
+        "save_text": false,
+        "srt": false,
         "vtt": false,
         "device": "Автоматически",
         "prompt": "",
@@ -322,6 +325,150 @@
         "existing_json": "",
         "beam_size": 5,
         "vad": true
+      }
+    },
+    {
+      "id": 3,
+      "type": "SpeakerTranscript",
+      "pos": [
+        1810,
+        240
+      ],
+      "size": [
+        480,
+        380
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "files",
+          "type": "SPEECH_FILES",
+          "link": 2
+        },
+        {
+          "label": "Распознанная речь",
+          "localized_name": "Распознанная речь",
+          "name": "recognition_json",
+          "type": "STRING",
+          "widget": {
+            "name": "recognition_json"
+          },
+          "link": 3
+        },
+        {
+          "label": "Разметка спикеров",
+          "localized_name": "Разметка спикеров",
+          "name": "diarization_json",
+          "type": "STRING",
+          "widget": {
+            "name": "diarization_json"
+          },
+          "link": null
+        },
+        {
+          "label": "Подтверждение имен",
+          "localized_name": "Подтверждение имен",
+          "name": "confirmed",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "confirmed"
+          },
+          "link": null
+        },
+        {
+          "label": "Сохранить JSON",
+          "localized_name": "Сохранить JSON",
+          "name": "save_json",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "save_json"
+          },
+          "link": null
+        },
+        {
+          "label": "Сохранить TXT",
+          "localized_name": "Сохранить TXT",
+          "name": "save_text",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "save_text"
+          },
+          "link": null
+        },
+        {
+          "label": "Карта имен",
+          "localized_name": "Карта имен",
+          "name": "speaker_map",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "speaker_map"
+          },
+          "link": null
+        },
+        {
+          "label": "Объединять паузы, с",
+          "localized_name": "Объединять паузы, с",
+          "name": "max_gap",
+          "shape": 7,
+          "type": "FLOAT",
+          "widget": {
+            "name": "max_gap"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Транскрипт",
+          "localized_name": "Транскрипт",
+          "name": "Транскрипт",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": null
+        },
+        {
+          "label": "Текст",
+          "localized_name": "Текст",
+          "name": "Текст",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": null
+        },
+        {
+          "label": "Сохраненные файлы",
+          "localized_name": "Сохраненные файлы",
+          "name": "Сохраненные файлы",
+          "type": "STRING",
+          "slot_index": 2,
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SpeakerTranscript"
+      },
+      "widgets_values": [
+        "",
+        "",
+        false,
+        true,
+        true,
+        "",
+        1
+      ],
+      "widgets_values_named": {
+        "recognition_json": "",
+        "diarization_json": "",
+        "confirmed": false,
+        "save_json": true,
+        "save_text": true,
+        "speaker_map": "",
+        "max_gap": 1
       }
     }
   ],
@@ -333,6 +480,22 @@
       2,
       0,
       "SPEECH_FILES"
+    ],
+    [
+      2,
+      1,
+      0,
+      3,
+      0,
+      "SPEECH_FILES"
+    ],
+    [
+      3,
+      2,
+      0,
+      3,
+      1,
+      "STRING"
     ]
   ],
   "groups": [],
@@ -343,6 +506,66 @@
       "offset": [
         -120,
         16
+      ]
+    },
+    "linearMode": true,
+    "linearData": {
+      "inputs": [
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:1:media_path",
+          "media_path"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:3:diarization_json",
+          "diarization_json"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:3:speaker_map",
+          "speaker_map"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:3:confirmed",
+          "confirmed"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:2:model",
+          "model"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:2:language",
+          "language"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:2:language_code",
+          "language_code"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:2:prompt",
+          "prompt"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:3:max_gap",
+          "max_gap"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:1:name",
+          "name"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:1:include_datetime",
+          "include_datetime"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:3:save_text",
+          "save_text"
+        ],
+        [
+          "173b5699-22eb-4627-b9a7-b42b15dc9662:3:save_json",
+          "save_json"
+        ]
+      ],
+      "outputs": [
+        3
       ]
     }
   },

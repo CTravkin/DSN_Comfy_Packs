@@ -1,15 +1,15 @@
 {
-  "id": "1ee7c23e-23d3-4dcb-968a-ad4a3949c236",
+  "id": "3990439f-e7d4-4d73-8317-f6c43cd03ff5",
   "revision": 0,
-  "last_node_id": 5,
-  "last_link_id": 8,
+  "last_node_id": 4,
+  "last_link_id": 5,
   "nodes": [
     {
       "id": 1,
       "type": "FileSetup",
       "pos": [
-        1110,
-        240
+        110,
+        140
       ],
       "size": [
         480,
@@ -71,8 +71,7 @@
           "links": [
             1,
             2,
-            4,
-            5
+            3
           ]
         },
         {
@@ -112,8 +111,8 @@
       "id": 2,
       "type": "SpeakerDiarization",
       "pos": [
-        1710,
-        40
+        710,
+        980
       ],
       "size": [
         480,
@@ -132,8 +131,8 @@
           "link": 1
         },
         {
-          "label": "Модель",
-          "localized_name": "Модель",
+          "label": "Модель разметки",
+          "localized_name": "Модель разметки",
           "name": "model",
           "type": "COMBO",
           "widget": {
@@ -213,8 +212,7 @@
           "type": "STRING",
           "slot_index": 0,
           "links": [
-            3,
-            7
+            5
           ]
         },
         {
@@ -250,128 +248,10 @@
     },
     {
       "id": 3,
-      "type": "VoiceprintIdentify",
-      "pos": [
-        2310,
-        140
-      ],
-      "size": [
-        480,
-        280
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "showAdvanced": false,
-      "inputs": [
-        {
-          "label": "Работа с файлами",
-          "localized_name": "Работа с файлами",
-          "name": "files",
-          "type": "SPEECH_FILES",
-          "link": 2
-        },
-        {
-          "label": "Модель",
-          "localized_name": "Модель",
-          "name": "model",
-          "type": "COMBO",
-          "widget": {
-            "name": "model"
-          },
-          "link": null
-        },
-        {
-          "label": "Разметка спикеров",
-          "localized_name": "Разметка спикеров",
-          "name": "diarization_json",
-          "type": "STRING",
-          "widget": {
-            "name": "diarization_json"
-          },
-          "link": 3
-        },
-        {
-          "label": "Эталоны голосов",
-          "localized_name": "Эталоны голосов",
-          "name": "reference_root",
-          "type": "STRING",
-          "widget": {
-            "name": "reference_root"
-          },
-          "link": null
-        },
-        {
-          "label": "Устройство",
-          "localized_name": "Устройство",
-          "name": "device",
-          "type": "COMBO",
-          "widget": {
-            "name": "device"
-          },
-          "link": null
-        },
-        {
-          "label": "Порог кандидата",
-          "localized_name": "Порог кандидата",
-          "name": "threshold",
-          "shape": 7,
-          "type": "FLOAT",
-          "widget": {
-            "name": "threshold"
-          },
-          "link": null
-        },
-        {
-          "label": "Минимальный отрыв",
-          "localized_name": "Минимальный отрыв",
-          "name": "minimum_margin",
-          "shape": 7,
-          "type": "FLOAT",
-          "widget": {
-            "name": "minimum_margin"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "label": "Кандидаты по голосам",
-          "localized_name": "Кандидаты по голосам",
-          "name": "Кандидаты по голосам",
-          "type": "STRING",
-          "slot_index": 0,
-          "links": [
-            8
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "VoiceprintIdentify"
-      },
-      "widgets_values": [
-        "SPKRec ECAPA VoxCeleb",
-        "",
-        "",
-        "Автоматически",
-        0.25,
-        0.05
-      ],
-      "widgets_values_named": {
-        "model": "SPKRec ECAPA VoxCeleb",
-        "diarization_json": "",
-        "reference_root": "",
-        "device": "Автоматически",
-        "threshold": 0.25,
-        "minimum_margin": 0.05
-      }
-    },
-    {
-      "id": 4,
       "type": "WhisperTranscribe",
       "pos": [
-        1710,
-        520
+        710,
+        240
       ],
       "size": [
         480,
@@ -387,11 +267,11 @@
           "localized_name": "Работа с файлами",
           "name": "files",
           "type": "SPEECH_FILES",
-          "link": 4
+          "link": 2
         },
         {
-          "label": "Модель",
-          "localized_name": "Модель",
+          "label": "Модель распознавания",
+          "localized_name": "Модель распознавания",
           "name": "model",
           "type": "COMBO",
           "widget": {
@@ -533,7 +413,7 @@
           "type": "STRING",
           "slot_index": 0,
           "links": [
-            6
+            4
           ]
         },
         {
@@ -588,18 +468,18 @@
       }
     },
     {
-      "id": 5,
+      "id": 4,
       "type": "SpeakerTranscript",
       "pos": [
-        2910,
-        540
+        1310,
+        140
       ],
       "size": [
         480,
-        360
+        370
       ],
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "showAdvanced": false,
       "inputs": [
@@ -608,7 +488,7 @@
           "localized_name": "Работа с файлами",
           "name": "files",
           "type": "SPEECH_FILES",
-          "link": 5
+          "link": 3
         },
         {
           "label": "Распознанная речь",
@@ -618,7 +498,7 @@
           "widget": {
             "name": "recognition_json"
           },
-          "link": 6
+          "link": 4
         },
         {
           "label": "Разметка спикеров",
@@ -628,7 +508,7 @@
           "widget": {
             "name": "diarization_json"
           },
-          "link": 7
+          "link": 5
         },
         {
           "label": "Подтверждение имен",
@@ -669,7 +549,7 @@
           "widget": {
             "name": "speaker_map"
           },
-          "link": 8
+          "link": null
         },
         {
           "label": "Объединять паузы, с",
@@ -750,7 +630,7 @@
       "SPEECH_FILES"
     ],
     [
-      4,
+      3,
       1,
       0,
       4,
@@ -758,43 +638,19 @@
       "SPEECH_FILES"
     ],
     [
-      5,
-      1,
-      0,
-      5,
-      0,
-      "SPEECH_FILES"
-    ],
-    [
-      6,
       4,
+      3,
       0,
-      5,
+      4,
       1,
       "STRING"
     ],
     [
-      7,
-      2,
-      0,
       5,
       2,
-      "STRING"
-    ],
-    [
-      3,
-      2,
       0,
-      3,
+      4,
       2,
-      "STRING"
-    ],
-    [
-      8,
-      3,
-      0,
-      5,
-      6,
       "STRING"
     ]
   ],
@@ -804,8 +660,64 @@
     "ds": {
       "scale": 1,
       "offset": [
-        -620,
-        116
+        380,
+        16
+      ]
+    },
+    "linearMode": true,
+    "linearData": {
+      "inputs": [
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:1:media_path",
+          "media_path"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:3:model",
+          "model"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:3:language",
+          "language"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:3:language_code",
+          "language_code"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:3:prompt",
+          "prompt"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:2:model",
+          "model"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:2:speakers",
+          "speakers"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:4:max_gap",
+          "max_gap"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:1:name",
+          "name"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:1:include_datetime",
+          "include_datetime"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:4:save_text",
+          "save_text"
+        ],
+        [
+          "3990439f-e7d4-4d73-8317-f6c43cd03ff5:4:save_json",
+          "save_json"
+        ]
+      ],
+      "outputs": [
+        4
       ]
     }
   },

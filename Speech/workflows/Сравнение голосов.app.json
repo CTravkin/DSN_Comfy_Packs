@@ -21,8 +21,8 @@
       "showAdvanced": false,
       "inputs": [
         {
-          "label": "Исходный файл",
-          "localized_name": "Исходный файл",
+          "label": "Первый отпечаток",
+          "localized_name": "Первый отпечаток",
           "name": "media_path",
           "type": "STRING",
           "widget": {
@@ -207,6 +207,30 @@
       "offset": [
         -120,
         716
+      ]
+    },
+    "linearMode": true,
+    "linearData": {
+      "inputs": [
+        [
+          "c46e5e95-361b-40a1-9f9d-c02fac55d55b:1:media_path",
+          "media_path"
+        ],
+        [
+          "c46e5e95-361b-40a1-9f9d-c02fac55d55b:2:right",
+          "right"
+        ],
+        [
+          "c46e5e95-361b-40a1-9f9d-c02fac55d55b:1:name",
+          "name"
+        ],
+        [
+          "c46e5e95-361b-40a1-9f9d-c02fac55d55b:1:include_datetime",
+          "include_datetime"
+        ]
+      ],
+      "outputs": [
+        2
       ]
     }
   },
