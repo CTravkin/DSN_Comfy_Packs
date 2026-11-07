@@ -139,6 +139,9 @@ app.registerExtension({
                 this.title = nodeData.display_name;
             }
         };
+        // Older runs may still contain a directory preview for File Setup.
+        if (nodeData.name === "FileSetup") return;
+
         const original = nodeType.prototype.onExecuted;
         nodeType.prototype.onExecuted = function(message) {
             original?.apply(this, arguments);

@@ -80,7 +80,7 @@ class FileSetup(io.ComfyNode):
     @classmethod
     def execute(cls, media_path, output_directory='', name='', include_datetime=True):
         context = files.setup_files(media_path, output_directory.strip() or folder_paths.get_output_directory(), name, include_datetime)
-        return io.NodeOutput(context, str(context.directory), str(context.source), ui={'text': [str(context.directory)]})
+        return io.NodeOutput(context, str(context.directory), str(context.source))
 
 
 class Whisper(io.ComfyNode):
