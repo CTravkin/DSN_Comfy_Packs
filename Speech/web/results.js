@@ -108,7 +108,7 @@ export function installResultActions(speechNodes) {
         .speech-result-files { display: flex; flex-wrap: wrap; gap: .25rem .75rem; overflow-wrap: anywhere; }
         .speech-result-files a { text-decoration: underline; }
         .speech-result-actions button { font: inherit; cursor: pointer; border: 1px solid currentColor; border-radius: .35rem; padding: .2rem .5rem; }
-        ${panelSelector} > .speech-result-actions { margin: .75rem .75rem 0; flex-shrink: 0; position: relative; z-index: 2; border: 1px solid var(--color-border-subtle); border-radius: .5rem; }
+        ${panelSelector} > .speech-result-actions { margin: 3.25rem .75rem 0; flex-shrink: 0; position: relative; z-index: 2; border: 1px solid var(--color-border-subtle); border-radius: .5rem; }
     `;
     document.head.append(style);
     api.addEventListener("executed", ({ detail }) => {
