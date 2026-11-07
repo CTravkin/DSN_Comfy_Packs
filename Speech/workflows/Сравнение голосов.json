@@ -1,0 +1,214 @@
+{
+  "id": "c46e5e95-361b-40a1-9f9d-c02fac55d55b",
+  "revision": 0,
+  "last_node_id": 2,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "FileSetup",
+      "pos": [
+        610,
+        -560
+      ],
+      "size": [
+        480,
+        280
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "Исходный файл",
+          "localized_name": "Исходный файл",
+          "name": "media_path",
+          "type": "STRING",
+          "widget": {
+            "name": "media_path"
+          },
+          "link": null
+        },
+        {
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "name": "output_directory",
+          "type": "STRING",
+          "widget": {
+            "name": "output_directory"
+          },
+          "link": null
+        },
+        {
+          "label": "Имя результата",
+          "localized_name": "Имя результата",
+          "name": "name",
+          "type": "STRING",
+          "widget": {
+            "name": "name"
+          },
+          "link": null
+        },
+        {
+          "label": "Дата и время в имени",
+          "localized_name": "Дата и время в имени",
+          "name": "include_datetime",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "include_datetime"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "Работа с файлами",
+          "type": "SPEECH_FILES",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        },
+        {
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "name": "Каталог результатов",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": null
+        },
+        {
+          "label": "Исходный файл",
+          "localized_name": "Исходный файл",
+          "name": "Исходный файл",
+          "type": "STRING",
+          "slot_index": 2,
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FileSetup"
+      },
+      "widgets_values": [
+        "",
+        "",
+        "",
+        true
+      ],
+      "widgets_values_named": {
+        "media_path": "",
+        "output_directory": "",
+        "name": "",
+        "include_datetime": true
+      }
+    },
+    {
+      "id": 2,
+      "type": "VoiceprintCompare",
+      "pos": [
+        1210,
+        -460
+      ],
+      "size": [
+        480,
+        170
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "files",
+          "type": "SPEECH_FILES",
+          "link": 1
+        },
+        {
+          "label": "Первый отпечаток",
+          "localized_name": "Первый отпечаток",
+          "name": "left",
+          "type": "STRING",
+          "widget": {
+            "name": "left"
+          },
+          "link": 2
+        },
+        {
+          "label": "Второй отпечаток",
+          "localized_name": "Второй отпечаток",
+          "name": "right",
+          "type": "STRING",
+          "widget": {
+            "name": "right"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Результат сравнения",
+          "localized_name": "Результат сравнения",
+          "name": "Результат сравнения",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": null
+        },
+        {
+          "label": "Сходство",
+          "localized_name": "Сходство",
+          "name": "Сходство",
+          "type": "FLOAT",
+          "slot_index": 1,
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VoiceprintCompare"
+      },
+      "widgets_values": [
+        "",
+        ""
+      ],
+      "widgets_values_named": {
+        "left": "",
+        "right": ""
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "SPEECH_FILES"
+    ],
+    [
+      2,
+      1,
+      2,
+      2,
+      1,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        -120,
+        716
+      ]
+    }
+  },
+  "version": 0.4
+}

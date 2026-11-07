@@ -1,0 +1,350 @@
+{
+  "id": "5f9a9f49-aa6f-473c-8732-1ab006fcf834",
+  "revision": 0,
+  "last_node_id": 2,
+  "last_link_id": 1,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "FileSetup",
+      "pos": [
+        610,
+        140
+      ],
+      "size": [
+        480,
+        280
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "Исходный файл",
+          "localized_name": "Исходный файл",
+          "name": "media_path",
+          "type": "STRING",
+          "widget": {
+            "name": "media_path"
+          },
+          "link": null
+        },
+        {
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "name": "output_directory",
+          "type": "STRING",
+          "widget": {
+            "name": "output_directory"
+          },
+          "link": null
+        },
+        {
+          "label": "Имя результата",
+          "localized_name": "Имя результата",
+          "name": "name",
+          "type": "STRING",
+          "widget": {
+            "name": "name"
+          },
+          "link": null
+        },
+        {
+          "label": "Дата и время в имени",
+          "localized_name": "Дата и время в имени",
+          "name": "include_datetime",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "include_datetime"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "Работа с файлами",
+          "type": "SPEECH_FILES",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        },
+        {
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "name": "Каталог результатов",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": null
+        },
+        {
+          "label": "Исходный файл",
+          "localized_name": "Исходный файл",
+          "name": "Исходный файл",
+          "type": "STRING",
+          "slot_index": 2,
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FileSetup"
+      },
+      "widgets_values": [
+        "",
+        "",
+        "",
+        true
+      ],
+      "widgets_values_named": {
+        "media_path": "",
+        "output_directory": "",
+        "name": "",
+        "include_datetime": true
+      }
+    },
+    {
+      "id": 2,
+      "type": "WhisperTranscribe",
+      "pos": [
+        1210,
+        240
+      ],
+      "size": [
+        480,
+        610
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "files",
+          "type": "SPEECH_FILES",
+          "link": 1
+        },
+        {
+          "label": "Модель",
+          "localized_name": "Модель",
+          "name": "model",
+          "type": "COMBO",
+          "widget": {
+            "name": "model"
+          },
+          "link": null
+        },
+        {
+          "label": "Язык",
+          "localized_name": "Язык",
+          "name": "language",
+          "type": "COMBO",
+          "widget": {
+            "name": "language"
+          },
+          "link": null
+        },
+        {
+          "label": "Задача",
+          "localized_name": "Задача",
+          "name": "task",
+          "type": "COMBO",
+          "widget": {
+            "name": "task"
+          },
+          "link": null
+        },
+        {
+          "label": "Сохранить JSON",
+          "localized_name": "Сохранить JSON",
+          "name": "save_json",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "save_json"
+          },
+          "link": null
+        },
+        {
+          "label": "Сохранить TXT",
+          "localized_name": "Сохранить TXT",
+          "name": "save_text",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "save_text"
+          },
+          "link": null
+        },
+        {
+          "label": "Субтитры SRT",
+          "localized_name": "Субтитры SRT",
+          "name": "srt",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "srt"
+          },
+          "link": null
+        },
+        {
+          "label": "Субтитры VTT",
+          "localized_name": "Субтитры VTT",
+          "name": "vtt",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "vtt"
+          },
+          "link": null
+        },
+        {
+          "label": "Устройство",
+          "localized_name": "Устройство",
+          "name": "device",
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        },
+        {
+          "label": "Имена и термины",
+          "localized_name": "Имена и термины",
+          "name": "prompt",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": null
+        },
+        {
+          "label": "Код языка",
+          "localized_name": "Код языка",
+          "name": "language_code",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "language_code"
+          },
+          "link": null
+        },
+        {
+          "label": "Готовый результат",
+          "localized_name": "Готовый результат",
+          "name": "existing_json",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "existing_json"
+          },
+          "link": null
+        },
+        {
+          "label": "Ширина поиска",
+          "localized_name": "Ширина поиска",
+          "name": "beam_size",
+          "shape": 7,
+          "type": "INT",
+          "widget": {
+            "name": "beam_size"
+          },
+          "link": null
+        },
+        {
+          "label": "Фильтрация участков без речи",
+          "localized_name": "Фильтрация участков без речи",
+          "name": "vad",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "vad"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Распознанная речь",
+          "localized_name": "Распознанная речь",
+          "name": "Распознанная речь",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": null
+        },
+        {
+          "label": "Текст",
+          "localized_name": "Текст",
+          "name": "Текст",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": null
+        },
+        {
+          "label": "Сохраненные файлы",
+          "localized_name": "Сохраненные файлы",
+          "name": "Сохраненные файлы",
+          "type": "STRING",
+          "slot_index": 2,
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "WhisperTranscribe"
+      },
+      "widgets_values": [
+        "Whisper Large V3 CT2",
+        "Автоматически",
+        "Распознать речь",
+        true,
+        true,
+        true,
+        false,
+        "Автоматически",
+        "",
+        "",
+        "",
+        5,
+        true
+      ],
+      "widgets_values_named": {
+        "model": "Whisper Large V3 CT2",
+        "language": "Автоматически",
+        "task": "Распознать речь",
+        "save_json": true,
+        "save_text": true,
+        "srt": true,
+        "vtt": false,
+        "device": "Автоматически",
+        "prompt": "",
+        "language_code": "",
+        "existing_json": "",
+        "beam_size": 5,
+        "vad": true
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "SPEECH_FILES"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        -120,
+        16
+      ]
+    }
+  },
+  "version": 0.4
+}

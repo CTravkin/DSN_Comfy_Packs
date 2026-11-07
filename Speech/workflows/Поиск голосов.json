@@ -1,0 +1,403 @@
+{
+  "id": "47f06f94-08b3-474f-9b0d-91d854343c59",
+  "revision": 0,
+  "last_node_id": 3,
+  "last_link_id": 3,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "FileSetup",
+      "pos": [
+        610,
+        140
+      ],
+      "size": [
+        480,
+        280
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "Исходный файл",
+          "localized_name": "Исходный файл",
+          "name": "media_path",
+          "type": "STRING",
+          "widget": {
+            "name": "media_path"
+          },
+          "link": null
+        },
+        {
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "name": "output_directory",
+          "type": "STRING",
+          "widget": {
+            "name": "output_directory"
+          },
+          "link": null
+        },
+        {
+          "label": "Имя результата",
+          "localized_name": "Имя результата",
+          "name": "name",
+          "type": "STRING",
+          "widget": {
+            "name": "name"
+          },
+          "link": null
+        },
+        {
+          "label": "Дата и время в имени",
+          "localized_name": "Дата и время в имени",
+          "name": "include_datetime",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "include_datetime"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "Работа с файлами",
+          "type": "SPEECH_FILES",
+          "slot_index": 0,
+          "links": [
+            1,
+            2
+          ]
+        },
+        {
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "name": "Каталог результатов",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": null
+        },
+        {
+          "label": "Исходный файл",
+          "localized_name": "Исходный файл",
+          "name": "Исходный файл",
+          "type": "STRING",
+          "slot_index": 2,
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FileSetup"
+      },
+      "widgets_values": [
+        "",
+        "",
+        "",
+        true
+      ],
+      "widgets_values_named": {
+        "media_path": "",
+        "output_directory": "",
+        "name": "",
+        "include_datetime": true
+      }
+    },
+    {
+      "id": 2,
+      "type": "SpeakerDiarization",
+      "pos": [
+        1210,
+        440
+      ],
+      "size": [
+        480,
+        340
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "files",
+          "type": "SPEECH_FILES",
+          "link": 1
+        },
+        {
+          "label": "Модель",
+          "localized_name": "Модель",
+          "name": "model",
+          "type": "COMBO",
+          "widget": {
+            "name": "model"
+          },
+          "link": null
+        },
+        {
+          "label": "Число спикеров",
+          "localized_name": "Число спикеров",
+          "name": "speakers",
+          "type": "INT",
+          "widget": {
+            "name": "speakers"
+          },
+          "link": null
+        },
+        {
+          "label": "Сохранить RTTM",
+          "localized_name": "Сохранить RTTM",
+          "name": "rttm",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "rttm"
+          },
+          "link": null
+        },
+        {
+          "label": "Устройство",
+          "localized_name": "Устройство",
+          "name": "device",
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        },
+        {
+          "label": "Минимум спикеров",
+          "localized_name": "Минимум спикеров",
+          "name": "min_speakers",
+          "shape": 7,
+          "type": "INT",
+          "widget": {
+            "name": "min_speakers"
+          },
+          "link": null
+        },
+        {
+          "label": "Максимум спикеров",
+          "localized_name": "Максимум спикеров",
+          "name": "max_speakers",
+          "shape": 7,
+          "type": "INT",
+          "widget": {
+            "name": "max_speakers"
+          },
+          "link": null
+        },
+        {
+          "label": "Готовая разметка",
+          "localized_name": "Готовая разметка",
+          "name": "existing_json",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "existing_json"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Разметка спикеров",
+          "localized_name": "Разметка спикеров",
+          "name": "Разметка спикеров",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": [
+            3
+          ]
+        },
+        {
+          "label": "Найдено спикеров",
+          "localized_name": "Найдено спикеров",
+          "name": "Найдено спикеров",
+          "type": "INT",
+          "slot_index": 1,
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SpeakerDiarization"
+      },
+      "widgets_values": [
+        "Pyannote Speaker Diarization Community 1",
+        0,
+        false,
+        "Автоматически",
+        0,
+        0,
+        ""
+      ],
+      "widgets_values_named": {
+        "model": "Pyannote Speaker Diarization Community 1",
+        "speakers": 0,
+        "rttm": false,
+        "device": "Автоматически",
+        "min_speakers": 0,
+        "max_speakers": 0,
+        "existing_json": ""
+      }
+    },
+    {
+      "id": 3,
+      "type": "VoiceprintIdentify",
+      "pos": [
+        1810,
+        240
+      ],
+      "size": [
+        480,
+        280
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "files",
+          "type": "SPEECH_FILES",
+          "link": 2
+        },
+        {
+          "label": "Модель",
+          "localized_name": "Модель",
+          "name": "model",
+          "type": "COMBO",
+          "widget": {
+            "name": "model"
+          },
+          "link": null
+        },
+        {
+          "label": "Разметка спикеров",
+          "localized_name": "Разметка спикеров",
+          "name": "diarization_json",
+          "type": "STRING",
+          "widget": {
+            "name": "diarization_json"
+          },
+          "link": 3
+        },
+        {
+          "label": "Эталоны голосов",
+          "localized_name": "Эталоны голосов",
+          "name": "reference_root",
+          "type": "STRING",
+          "widget": {
+            "name": "reference_root"
+          },
+          "link": null
+        },
+        {
+          "label": "Устройство",
+          "localized_name": "Устройство",
+          "name": "device",
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        },
+        {
+          "label": "Порог кандидата",
+          "localized_name": "Порог кандидата",
+          "name": "threshold",
+          "shape": 7,
+          "type": "FLOAT",
+          "widget": {
+            "name": "threshold"
+          },
+          "link": null
+        },
+        {
+          "label": "Минимальный отрыв",
+          "localized_name": "Минимальный отрыв",
+          "name": "minimum_margin",
+          "shape": 7,
+          "type": "FLOAT",
+          "widget": {
+            "name": "minimum_margin"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Кандидаты по голосам",
+          "localized_name": "Кандидаты по голосам",
+          "name": "Кандидаты по голосам",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VoiceprintIdentify"
+      },
+      "widgets_values": [
+        "SPKRec ECAPA VoxCeleb",
+        "",
+        "",
+        "Автоматически",
+        0.25,
+        0.05
+      ],
+      "widgets_values_named": {
+        "model": "SPKRec ECAPA VoxCeleb",
+        "diarization_json": "",
+        "reference_root": "",
+        "device": "Автоматически",
+        "threshold": 0.25,
+        "minimum_margin": 0.05
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "SPEECH_FILES"
+    ],
+    [
+      2,
+      1,
+      0,
+      3,
+      0,
+      "SPEECH_FILES"
+    ],
+    [
+      3,
+      2,
+      0,
+      3,
+      2,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        -120,
+        16
+      ]
+    }
+  },
+  "version": 0.4
+}

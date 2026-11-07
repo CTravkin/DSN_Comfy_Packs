@@ -1,0 +1,221 @@
+{
+  "id": "be5eb872-7e7e-4f56-861d-90e32eb8df8e",
+  "revision": 0,
+  "last_node_id": 2,
+  "last_link_id": 1,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "FileSetup",
+      "pos": [
+        -390,
+        -360
+      ],
+      "size": [
+        480,
+        280
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "Исходный файл",
+          "localized_name": "Исходный файл",
+          "name": "media_path",
+          "type": "STRING",
+          "widget": {
+            "name": "media_path"
+          },
+          "link": null
+        },
+        {
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "name": "output_directory",
+          "type": "STRING",
+          "widget": {
+            "name": "output_directory"
+          },
+          "link": null
+        },
+        {
+          "label": "Имя результата",
+          "localized_name": "Имя результата",
+          "name": "name",
+          "type": "STRING",
+          "widget": {
+            "name": "name"
+          },
+          "link": null
+        },
+        {
+          "label": "Дата и время в имени",
+          "localized_name": "Дата и время в имени",
+          "name": "include_datetime",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "include_datetime"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "Работа с файлами",
+          "type": "SPEECH_FILES",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        },
+        {
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "name": "Каталог результатов",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": null
+        },
+        {
+          "label": "Исходный файл",
+          "localized_name": "Исходный файл",
+          "name": "Исходный файл",
+          "type": "STRING",
+          "slot_index": 2,
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FileSetup"
+      },
+      "widgets_values": [
+        "",
+        "",
+        "",
+        true
+      ],
+      "widgets_values_named": {
+        "media_path": "",
+        "output_directory": "",
+        "name": "",
+        "include_datetime": true
+      }
+    },
+    {
+      "id": 2,
+      "type": "VoiceprintExtract",
+      "pos": [
+        210,
+        -260
+      ],
+      "size": [
+        480,
+        220
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "Работа с файлами",
+          "localized_name": "Работа с файлами",
+          "name": "files",
+          "type": "SPEECH_FILES",
+          "link": 1
+        },
+        {
+          "label": "Модель",
+          "localized_name": "Модель",
+          "name": "model",
+          "type": "COMBO",
+          "widget": {
+            "name": "model"
+          },
+          "link": null
+        },
+        {
+          "label": "Начало фрагмента, с",
+          "localized_name": "Начало фрагмента, с",
+          "name": "start",
+          "type": "FLOAT",
+          "widget": {
+            "name": "start"
+          },
+          "link": null
+        },
+        {
+          "label": "Конец фрагмента, с",
+          "localized_name": "Конец фрагмента, с",
+          "name": "end",
+          "type": "FLOAT",
+          "widget": {
+            "name": "end"
+          },
+          "link": null
+        },
+        {
+          "label": "Устройство",
+          "localized_name": "Устройство",
+          "name": "device",
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "Голосовой отпечаток",
+          "localized_name": "Голосовой отпечаток",
+          "name": "Голосовой отпечаток",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VoiceprintExtract"
+      },
+      "widgets_values": [
+        "SPKRec ECAPA VoxCeleb",
+        0,
+        0,
+        "Автоматически"
+      ],
+      "widgets_values_named": {
+        "model": "SPKRec ECAPA VoxCeleb",
+        "start": 0,
+        "end": 0,
+        "device": "Автоматически"
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "SPEECH_FILES"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        880,
+        516
+      ]
+    }
+  },
+  "version": 0.4
+}

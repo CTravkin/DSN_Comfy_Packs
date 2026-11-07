@@ -1,0 +1,229 @@
+from __future__ import annotations
+
+import json
+import threading
+
+from comfy_api.latest import io
+
+from . import catalog, files, runtime
+
+FileContext = io.Custom('SPEECH_FILES')
+_MODEL_LOCK = threading.Lock()
+DEVICES = {'Автоматически': 'auto', 'Видеокарта': 'cuda', 'Процессор': 'cpu'}
+LANGUAGES = {'Автоматически': 'auto', 'Русский': 'ru', 'Английский': 'en', 'Немецкий': 'de', 'Французский': 'fr', 'Испанский': 'es', 'Другой': None}
+
+
+def boolean(key, label, default=False, **kwargs):
+    return io.Boolean.Input(key, display_name=label, default=default,
+                            label_on='Включено', label_off='Выключено', **kwargs)
+
+
+def context_input():
+    return FileContext.Input('files', display_name='Работа с файлами', tooltip='Источник и настройки сохранения из File Setup')
+
+
+def model_input(family):
+    names = [model.display_name for model in catalog.load_models() if model.family == family]
+    return io.Combo.Input('model', options=names, display_name='Модель', default=names[0] if names else None,
+                          tooltip='Совместимые установленные комплекты из библиотеки моделей')
+
+
+def device_input():
+    return io.Combo.Input('device', options=list(DEVICES), display_name='Устройство', default='Автоматически', advanced=True,
+                          tooltip='Автоматический режим использует GPU, если Comfy поддерживает его в текущем окружении, иначе CPU')
+
+
+def string_output(key, label):
+    return io.String.Output(key, display_name=label)
+
+
+def schema(node_id, title, inputs, outputs, description, aliases=(), output=True):
+    return io.Schema(node_id=node_id, display_name=title, category=catalog.CATEGORY, inputs=inputs, outputs=outputs,
+                     description=description, search_aliases=list(aliases), is_output_node=output)
+
+
+def heavy(function, *args, **kwargs):
+    import comfy.model_management as memory
+    while not _MODEL_LOCK.acquire(timeout=0.25):
+        memory.throw_exception_if_processing_interrupted()
+    try:
+        memory.throw_exception_if_processing_interrupted()
+        memory.unload_all_models()
+        memory.soft_empty_cache()
+        if kwargs.get('device') == 'auto':
+            kwargs['device'] = 'cuda' if memory.get_torch_device().type == 'cuda' else 'cpu'
+        return function(*args, **kwargs, cancel_check=memory.throw_exception_if_processing_interrupted)
+    finally:
+        _MODEL_LOCK.release()
+
+
+def result_ui(*lines):
+    return {'text': ['\n'.join(str(line) for line in lines if line)]}
+
+
+class FileSetup(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema('FileSetup', 'File Setup', [
+            io.String.Input('media_path', display_name='Исходный файл', default='', tooltip='Путь к записи или JSON отпечатка для сравнения, исходный файл остается на месте'),
+            io.String.Input('output_directory', display_name='Каталог результатов', default=str(catalog.AI_ROOT / 'Output'), advanced=True,
+                            tooltip='Каталог, в котором создается папка запуска; пустое поле означает общий Output'),
+            io.String.Input('name', display_name='Имя результата', default='', tooltip='Общее имя папки и основных файлов; пустое поле допускается'),
+            boolean('include_datetime', 'Дата и время в имени', True,
+                    tooltip='Дата и время добавляются к имени папки запуска и основных файлов'),
+        ], [FileContext.Output('files', display_name='Работа с файлами'),
+            string_output('directory', 'Каталог результатов'), string_output('source', 'Исходный файл')],
+            'Настройка источника и общего каталога запуска; дата и время фиксируются один раз, предыдущие результаты сохраняются.',
+            ['файл', 'сохранение', 'источник'], output=False)
+
+    @classmethod
+    def fingerprint_inputs(cls, **kwargs):
+        return float('nan')
+
+    @classmethod
+    def execute(cls, media_path, output_directory='', name='', include_datetime=True):
+        context = files.setup_files(media_path, output_directory, name, include_datetime)
+        return io.NodeOutput(context, str(context.directory), str(context.source), ui=result_ui(context.directory))
+
+
+class Whisper(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema('WhisperTranscribe', 'Whisper', [context_input(), model_input('whisper'),
+            io.Combo.Input('language', options=list(LANGUAGES), display_name='Язык', default='Автоматически',
+                           tooltip='Язык исходной записи, в автоматическом режиме его определяет модель'),
+            io.Combo.Input('task', options=['Распознать речь', 'Перевести на английский'], display_name='Задача', default='Распознать речь',
+                           tooltip='Распознавание сохраняет исходный язык; перевод на английский доступен для совместимых моделей'),
+            io.String.Input('prompt', display_name='Имена и термины', default='', multiline=True, optional=True,
+                            tooltip='Правильное написание имен, названий и терминов для распознавания'),
+            boolean('save_json', 'Сохранить JSON', False, tooltip='Копия JSON распознавания в каталоге результатов'),
+            boolean('save_text', 'Сохранить TXT', False, tooltip='Текстовый файл в каталоге результатов'),
+            boolean('srt', 'Субтитры SRT', tooltip='Субтитры в формате SubRip'),
+            boolean('vtt', 'Субтитры VTT', tooltip='Субтитры в формате WebVTT'), device_input(),
+            io.String.Input('language_code', display_name='Код языка', default='', optional=True, advanced=True, tooltip='Код ISO 639-1 для языка, выбранного как «Другой»'),
+            io.String.Input('existing_json', display_name='Готовый результат', default='', optional=True, advanced=True, tooltip='JSON распознавания для той же записи, модели и настроек; повторная загрузка модели не требуется'),
+            io.Int.Input('beam_size', display_name='Ширина поиска', default=5, min=1, max=50, optional=True, advanced=True,
+                         tooltip='Количество вариантов при декодировании; большее значение может замедлить распознавание'),
+            boolean('vad', 'Фильтрация участков без речи', True, optional=True, advanced=True,
+                    tooltip='Участки без речи исключаются из распознавания'),
+        ], [string_output('recognition_json', 'Распознанная речь'), string_output('text', 'Текст'),
+            string_output('exports', 'Сохраненные файлы')],
+            'Локальное распознавание речи с таймкодами слов; промежуточный JSON сохраняется в Data, дополнительные файлы создаются по выбранным форматам.',
+            ['распознавание', 'субтитры', 'transcribe', 'turbo'])
+
+    @classmethod
+    def execute(cls, files, model, language='Автоматически', task='Распознать речь', prompt='', save_json=False,
+                save_text=False, srt=False, vtt=False, device='Автоматически', language_code='', existing_json='', beam_size=5, vad=True):
+        code = LANGUAGES[language] if language != 'Другой' else language_code.strip().lower()
+        if not code:
+            raise ValueError('Для языка «Другой» требуется код языка')
+        path, text, exports = heavy(runtime.whisper, files, catalog.select_model(model, 'whisper'), language=code,
+            task='translate' if task == 'Перевести на английский' else 'transcribe', prompt=prompt, device=DEVICES[device],
+            save_json=save_json, save_text=save_text, srt=srt, vtt=vtt, existing_json=existing_json, beam_size=beam_size, vad=vad)
+        return io.NodeOutput(path, text, json.dumps(exports, ensure_ascii=False), ui=result_ui(text, *exports.values()))
+
+
+class SpeakerDiarization(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema('SpeakerDiarization', 'Speaker Diarization', [context_input(), model_input('diarization'),
+            io.Int.Input('speakers', display_name='Число спикеров', default=0, min=0, max=100, tooltip='0 — определить автоматически'),
+            boolean('rttm', 'Сохранить RTTM', tooltip='Файл RTTM с интервалами реплик спикеров'), device_input(),
+            io.Int.Input('min_speakers', display_name='Минимум спикеров', default=0, min=0, max=100, optional=True, advanced=True, tooltip='0 — без ограничения'),
+            io.Int.Input('max_speakers', display_name='Максимум спикеров', default=0, min=0, max=100, optional=True, advanced=True, tooltip='0 — без ограничения'),
+            io.String.Input('existing_json', display_name='Готовая разметка', default='', optional=True, advanced=True,
+                            tooltip='JSON разметки той же записи, модели и настроек для повторного использования'),
+        ], [string_output('diarization_json', 'Разметка спикеров'), io.Int.Output('speaker_count', display_name='Найдено спикеров')],
+            'Разметка интервалов речи по анонимным спикерам без определения имен участников.', ['диаризация', 'спикеры', 'pyannote'])
+
+    @classmethod
+    def execute(cls, files, model, speakers=0, rttm=False, device='Автоматически', min_speakers=0, max_speakers=0, existing_json=''):
+        path, count = heavy(runtime.diarize, files, catalog.select_model(model, 'diarization'), device=DEVICES[device],
+                            speakers=speakers, min_speakers=min_speakers, max_speakers=max_speakers, rttm=rttm, existing_json=existing_json)
+        return io.NodeOutput(path, count, ui=result_ui(f'Найдено спикеров: {count}', path))
+
+
+class Voiceprint(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema('VoiceprintExtract', 'Voiceprint', [context_input(), model_input('voiceprint'),
+            io.Float.Input('start', display_name='Начало фрагмента, с', default=0, min=0, step=0.1,
+                           tooltip='Время от начала записи, 0 означает начало файла'),
+            io.Float.Input('end', display_name='Конец фрагмента, с', default=0, min=0, step=0.1, tooltip='0 — до конца записи'), device_input(),
+        ], [string_output('voiceprint_json', 'Голосовой отпечаток')],
+            'Голосовой отпечаток фрагмента с одним спикером; для эталона используются запись с подтвержденным именем и каталог из File Setup.', ['голос', 'отпечаток', 'ecapa'])
+
+    @classmethod
+    def execute(cls, files, model, start=0, end=0, device='Автоматически'):
+        path = heavy(runtime.extract, files, catalog.select_model(model, 'voiceprint'), start=start, end=end, device=DEVICES[device])
+        return io.NodeOutput(path, ui=result_ui(path))
+
+
+class VoiceprintCompare(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema('VoiceprintCompare', 'Voiceprint Compare', [context_input(),
+            io.String.Input('left', display_name='Первый отпечаток', default='',
+                            tooltip='Путь к JSON первого отпечатка или связь с выходом «Исходный файл» в File Setup'),
+            io.String.Input('right', display_name='Второй отпечаток', default='',
+                            tooltip='Путь к JSON второго отпечатка той же модели'),
+        ], [string_output('comparison_json', 'Результат сравнения'), io.Float.Output('similarity', display_name='Сходство')],
+            'Сравнение двух совместимых голосовых отпечатков; оценка сходства не подтверждает личность.', ['сравнение голосов', 'similarity'])
+
+    @classmethod
+    def execute(cls, files, left, right):
+        from comfy.model_management import throw_exception_if_processing_interrupted
+        path, score = runtime.compare(files, left, right, cancel_check=throw_exception_if_processing_interrupted)
+        return io.NodeOutput(path, score, ui=result_ui(f'Сходство: {score:.4f}', path))
+
+
+class VoiceprintIdentify(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema('VoiceprintIdentify', 'Voiceprint Identity', [context_input(), model_input('voiceprint'),
+            io.String.Input('diarization_json', display_name='Разметка спикеров', default='',
+                            tooltip='Связь с Speaker Diarization или путь к готовому JSON разметки'),
+            io.String.Input('reference_root', display_name='Эталоны голосов', default='', advanced=True,
+                            tooltip='Каталог подтвержденных отпечатков; пустое поле означает Data/Speakers общего корня AI'),
+            device_input(),
+            io.Float.Input('threshold', display_name='Порог кандидата', default=0.25, min=-1, max=1, step=0.01, optional=True,
+                           tooltip='Минимальная оценка сходства для предложения имени'),
+            io.Float.Input('minimum_margin', display_name='Минимальный отрыв', default=0.05, min=0, max=2, step=0.01, optional=True,
+                           tooltip='Минимальная разница между оценками двух лучших кандидатов'),
+        ], [string_output('identification_json', 'Кандидаты по голосам')],
+            'Поиск кандидатов по подтвержденным эталонам; при недостаточной уверенности спикер остается неизвестным.', ['эталоны', 'идентификация', 'ecapa'])
+
+    @classmethod
+    def execute(cls, files, model, diarization_json, reference_root, device='Автоматически', threshold=0.25, minimum_margin=0.05):
+        path = heavy(runtime.identify, files, catalog.select_model(model, 'voiceprint'), diarization_json, reference_root,
+                     device=DEVICES[device], threshold=threshold, minimum_margin=minimum_margin)
+        return io.NodeOutput(path, ui=result_ui('Карта кандидатов', path))
+
+
+class SpeakerTranscript(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema('SpeakerTranscript', 'Speaker Transcript', [context_input(),
+            io.String.Input('recognition_json', display_name='Распознанная речь', default='',
+                            tooltip='Связь с Whisper или путь к готовому JSON распознавания'),
+            io.String.Input('diarization_json', display_name='Разметка спикеров', default='',
+                            tooltip='Связь с Speaker Diarization или путь к готовому JSON разметки'),
+            io.String.Input('speaker_map', display_name='Карта имен', default='', optional=True, advanced=True,
+                            tooltip='Связь с Voiceprint Identity или путь к карте имен для той же разметки'),
+            boolean('confirmed', 'Подтверждение имен', advanced=True, tooltip='Отмечает имена проверенными вручную; по умолчанию они остаются кандидатами'),
+            boolean('save_json', 'Сохранить JSON', True, tooltip='Копия JSON транскрипта в каталоге результатов'), boolean('save_text', 'Сохранить TXT', True, tooltip='Текстовый файл в каталоге результатов; выход «Текст» доступен независимо от экспорта'),
+            io.Float.Input('max_gap', display_name='Объединять паузы, с', default=1, min=0, max=60, step=0.1, optional=True,
+                           tooltip='Максимальная пауза для объединения соседних реплик одного спикера'),
+        ], [string_output('transcript_json', 'Транскрипт'), string_output('text', 'Текст'), string_output('exports', 'Сохраненные файлы')],
+            'Объединение распознанного текста с репликами спикеров; без ручного подтверждения имена отмечаются как кандидаты.', ['транскрипт', 'расшифровка', 'спикеры'])
+
+    @classmethod
+    def execute(cls, files, recognition_json, diarization_json, speaker_map='', confirmed=False, save_json=True, save_text=True, max_gap=1):
+        from comfy.model_management import throw_exception_if_processing_interrupted
+        path, text, exports = runtime.transcript(files, recognition_json, diarization_json, speaker_map=speaker_map,
+            confirmed=confirmed, save_json=save_json, save_text=save_text, max_gap=max_gap,
+            cancel_check=throw_exception_if_processing_interrupted)
+        return io.NodeOutput(path, text, json.dumps(exports, ensure_ascii=False), ui=result_ui(text, *exports.values()))
+
+
+NODES = [FileSetup, Whisper, SpeakerDiarization, Voiceprint, VoiceprintCompare, VoiceprintIdentify, SpeakerTranscript]
