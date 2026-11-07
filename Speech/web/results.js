@@ -22,8 +22,8 @@ function element(tag, text) {
 function resultActions(result, inApp) {
     const section = element("section");
     section.className = "speech-result-actions font-inter text-base-foreground";
-    if (inApp) section.classList.add("speech-result-card");
-    const heading = element("h3", inApp ? "Результат" : result.summary);
+    if (inApp) section.classList.add("speech-result-card", "floating-panel");
+    const heading = element("h3", "Результат");
     heading.className = "speech-result-heading";
     const folder = element("div", result.directory);
     folder.className = "speech-result-path";
@@ -132,13 +132,12 @@ export function installResultActions(speechNodes) {
         .speech-result-actions [role="status"]:empty { display: none; }
         .speech-result-card {
             flex-shrink: 0; position: relative; z-index: 2;
-            width: fit-content; max-width: min(34rem, calc(100% - 1.5rem)); margin: 3.25rem .75rem 0;
-            padding: .625rem .75rem; background: var(--base-background, Canvas);
-            border: 1px solid var(--border-subtle, transparent); border-radius: var(--radius-xl, .75rem);
+            align-self: stretch; margin: 3.75rem .5rem 0; padding: .625rem .75rem;
             font-size: .875rem; line-height: 1.25rem;
         }
         .speech-result-card .speech-result-heading { font-size: 1rem; line-height: 1.5rem; font-weight: 700; }
         .speech-result-card .speech-result-button { min-height: 1.75rem; }
+        .speech-result-card ~ [data-testid="linear-output-info"] { padding-block-start: 0; }
     `;
     document.head.append(style);
     api.addEventListener("executed", ({ detail }) => {
