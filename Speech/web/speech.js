@@ -1,6 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
+import { currentResult, installResultActions, refreshResultActions, showNodeResult } from "./results.js";
 
 // Display order only; widget positions and numbered sockets in saved graphs stay stable.
 const fields = {
@@ -92,6 +93,7 @@ app.registerExtension({
     name: "Speech.ModelsAndResults",
     async setup() {
         installNodeLayout();
+        installResultActions(fields);
         // Adapt only our category. Other model libraries and metadata stay native.
         const getModels = api.getModels.bind(api);
         api.getModels = async function(folder, ...args) {
@@ -111,6 +113,9 @@ app.registerExtension({
         } catch {
             console.warn("Библиотека моделей речи: соединение пока недоступно");
         }
+    },
+    afterConfigureGraph() {
+        refreshResultActions();
     },
     nodeCreated(node) {
         if (!Object.hasOwn(fields, node.comfyClass ?? node.type)) return;
@@ -137,6 +142,11 @@ app.registerExtension({
         const original = nodeType.prototype.onExecuted;
         nodeType.prototype.onExecuted = function(message) {
             original?.apply(this, arguments);
+            if (message?.speech_result) {
+                const result = currentResult(message);
+                if (result) showNodeResult(this, result);
+                return;
+            }
             if (!Array.isArray(message?.text)) return;
             let widget = this.widgets?.find(item => item.name === "Результат");
             if (!widget) {

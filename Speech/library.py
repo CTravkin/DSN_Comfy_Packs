@@ -140,10 +140,12 @@ def install():
     if server is None:
         return
     from aiohttp import web
+    from .results import install_routes
     catalog.write_descriptors(catalog.load_models())
     folder_paths.add_model_folder_path(catalog.CATEGORY, str(catalog.CATALOG_ROOT))
     paths, extensions = folder_paths.folder_names_and_paths[catalog.CATEGORY]
     folder_paths.folder_names_and_paths[catalog.CATEGORY] = (paths, extensions | {'.json'})
+    install_routes(server.routes)
 
     @server.routes.get('/speech/catalog')
     async def get_catalog(request):

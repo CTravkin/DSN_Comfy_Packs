@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 import threading
 
+import folder_paths
 from comfy_api.latest import io
 
-from . import catalog, files, runtime
+from . import catalog, files, results, runtime
 
 FileContext = io.Custom('SPEECH_FILES')
 _MODEL_LOCK = threading.Lock()
@@ -57,17 +58,13 @@ def heavy(function, *args, **kwargs):
         _MODEL_LOCK.release()
 
 
-def result_ui(*lines):
-    return {'text': ['\n'.join(str(line) for line in lines if line)]}
-
-
 class FileSetup(io.ComfyNode):
     @classmethod
     def define_schema(cls):
         return schema('FileSetup', 'File Setup', [
             io.String.Input('media_path', display_name='Исходный файл', default='', tooltip='Путь к записи или JSON отпечатка для сравнения, исходный файл остается на месте'),
-            io.String.Input('output_directory', display_name='Каталог результатов', default=str(catalog.AI_ROOT / 'Output'), advanced=True,
-                            tooltip='Каталог, в котором создается папка запуска; пустое поле означает общий Output'),
+            io.String.Input('output_directory', display_name='Каталог результатов', default='', advanced=True,
+                            tooltip='Каталог, в котором создается папка запуска; пустое поле означает Output Comfy'),
             io.String.Input('name', display_name='Имя результата', default='', tooltip='Общее имя папки и основных файлов; пустое поле допускается'),
             boolean('include_datetime', 'Дата и время в имени', True,
                     tooltip='Дата и время добавляются к имени папки запуска и основных файлов'),
@@ -82,8 +79,8 @@ class FileSetup(io.ComfyNode):
 
     @classmethod
     def execute(cls, media_path, output_directory='', name='', include_datetime=True):
-        context = files.setup_files(media_path, output_directory, name, include_datetime)
-        return io.NodeOutput(context, str(context.directory), str(context.source), ui=result_ui(context.directory))
+        context = files.setup_files(media_path, output_directory.strip() or folder_paths.get_output_directory(), name, include_datetime)
+        return io.NodeOutput(context, str(context.directory), str(context.source), ui={'text': [str(context.directory)]})
 
 
 class Whisper(io.ComfyNode):
@@ -120,7 +117,9 @@ class Whisper(io.ComfyNode):
         path, text, exports = heavy(runtime.whisper, files, catalog.select_model(model, 'whisper'), language=code,
             task='translate' if task == 'Перевести на английский' else 'transcribe', prompt=prompt, device=DEVICES[device],
             save_json=save_json, save_text=save_text, srt=srt, vtt=vtt, existing_json=existing_json, beam_size=beam_size, vad=vad)
-        return io.NodeOutput(path, text, json.dumps(exports, ensure_ascii=False), ui=result_ui(text, *exports.values()))
+        summary = 'Расшифровка готова' if text.strip() else 'Речь не найдена'
+        return io.NodeOutput(path, text, json.dumps(exports, ensure_ascii=False),
+                             ui=results.presentation(cls, files, summary, exports.values(), text=text))
 
 
 class SpeakerDiarization(io.ComfyNode):
@@ -140,7 +139,17 @@ class SpeakerDiarization(io.ComfyNode):
     def execute(cls, files, model, speakers=0, rttm=False, device='Автоматически', min_speakers=0, max_speakers=0, existing_json=''):
         path, count = heavy(runtime.diarize, files, catalog.select_model(model, 'diarization'), device=DEVICES[device],
                             speakers=speakers, min_speakers=min_speakers, max_speakers=max_speakers, rttm=rttm, existing_json=existing_json)
-        return io.NodeOutput(path, count, ui=result_ui(f'Найдено спикеров: {count}', path))
+        summary = f'Найдено спикеров: {count}'
+        try:
+            segments = runtime.read_result(runtime.read_path(path))['segments']
+            lines = [f'{float(segment["start"]):.2f}–{float(segment["end"]):.2f} с · {segment["speaker"]}' for segment in segments]
+        except (OSError, KeyError, TypeError, ValueError):
+            lines = []
+        artifacts = [path]
+        if rttm:
+            artifacts.append(files.directory / (files.name + '.rttm'))
+        return io.NodeOutput(path, count, ui=results.presentation(cls, files, summary, artifacts,
+                                                                 text='\n'.join([summary, '', *lines])))
 
 
 class Voiceprint(io.ComfyNode):
@@ -156,7 +165,7 @@ class Voiceprint(io.ComfyNode):
     @classmethod
     def execute(cls, files, model, start=0, end=0, device='Автоматически'):
         path = heavy(runtime.extract, files, catalog.select_model(model, 'voiceprint'), start=start, end=end, device=DEVICES[device])
-        return io.NodeOutput(path, ui=result_ui(path))
+        return io.NodeOutput(path, ui=results.presentation(cls, files, 'Голосовой отпечаток готов', [path]))
 
 
 class VoiceprintCompare(io.ComfyNode):
@@ -174,7 +183,7 @@ class VoiceprintCompare(io.ComfyNode):
     def execute(cls, files, left, right):
         from comfy.model_management import throw_exception_if_processing_interrupted
         path, score = runtime.compare(files, left, right, cancel_check=throw_exception_if_processing_interrupted)
-        return io.NodeOutput(path, score, ui=result_ui(f'Сходство: {score:.4f}', path))
+        return io.NodeOutput(path, score, ui=results.presentation(cls, files, f'Сходство: {score:.4f}', [path]))
 
 
 class VoiceprintIdentify(io.ComfyNode):
@@ -197,7 +206,12 @@ class VoiceprintIdentify(io.ComfyNode):
     def execute(cls, files, model, diarization_json, reference_root, device='Автоматически', threshold=0.25, minimum_margin=0.05):
         path = heavy(runtime.identify, files, catalog.select_model(model, 'voiceprint'), diarization_json, reference_root,
                      device=DEVICES[device], threshold=threshold, minimum_margin=minimum_margin)
-        return io.NodeOutput(path, ui=result_ui('Карта кандидатов', path))
+        data = runtime.read_result(runtime.read_path(path))
+        candidates = data['mapping']
+        summary = f'Кандидатов по голосам: {len(candidates)}'
+        lines = [f'{speaker} · {candidates.get(speaker) or "Кандидат не найден"}' for speaker in data['speakers']]
+        return io.NodeOutput(path, ui=results.presentation(cls, files, summary, [path],
+                                                          text='\n'.join([summary, '', *lines])))
 
 
 class SpeakerTranscript(io.ComfyNode):
@@ -223,7 +237,8 @@ class SpeakerTranscript(io.ComfyNode):
         path, text, exports = runtime.transcript(files, recognition_json, diarization_json, speaker_map=speaker_map,
             confirmed=confirmed, save_json=save_json, save_text=save_text, max_gap=max_gap,
             cancel_check=throw_exception_if_processing_interrupted)
-        return io.NodeOutput(path, text, json.dumps(exports, ensure_ascii=False), ui=result_ui(text, *exports.values()))
+        return io.NodeOutput(path, text, json.dumps(exports, ensure_ascii=False),
+                             ui=results.presentation(cls, files, 'Транскрипт готов', exports.values(), text=text))
 
 
 NODES = [FileSetup, Whisper, SpeakerDiarization, Voiceprint, VoiceprintCompare, VoiceprintIdentify, SpeakerTranscript]
