@@ -21,33 +21,42 @@ function element(tag, text) {
 
 function resultActions(result, inApp) {
     const section = element("section");
-    section.className = "speech-result-actions font-inter text-sm";
+    section.className = "speech-result-actions font-inter text-base-foreground";
+    if (inApp) section.classList.add("speech-result-card");
     const heading = element("h3", inApp ? "Результат" : result.summary);
-    heading.className = "font-semibold text-base-foreground";
+    heading.className = "speech-result-heading";
     const folder = element("div", result.directory);
-    folder.className = "speech-result-path text-muted-foreground";
+    folder.className = "speech-result-path";
     section.append(heading, folder);
     const list = element("ul");
     list.className = "speech-result-files";
-    for (const { name, file } of result.exports) {
+    for (const [index, { name, file }] of result.exports.entries()) {
         const row = element("li");
+        const branch = element("span", index === result.exports.length - 1 ? "└─" : "├─");
+        branch.className = "speech-result-branch text-muted-foreground";
+        branch.setAttribute("aria-hidden", "true");
+        row.append(branch);
         list.append(row);
         if (!file || file.type !== "output") {
-            row.textContent = name;
+            row.append(element("span", name));
             continue;
         }
         const query = new URLSearchParams({ filename: file.filename, subfolder: file.subfolder, type: file.type });
         const link = element("a", name);
         link.href = api.apiURL(`/view?${query}`);
         link.download = name;
-        link.className = "text-base-foreground underline hover:text-muted-foreground";
+        link.className = "speech-result-link";
         row.append(link);
     }
     if (result.exports.length) section.append(list);
     if (result.folder_token && localHosts.has(location.hostname)) {
-        const button = element("button", "Открыть папку");
+        const button = element("button");
         button.type = "button";
-        button.className = "inline-flex h-8 items-center justify-center rounded-md bg-secondary-background px-3 font-medium text-base-foreground transition-colors hover:bg-secondary-background-hover focus-visible:ring-1 focus-visible:ring-border-default focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
+        button.className = "speech-result-button inline-flex cursor-pointer appearance-none items-center gap-2 rounded-md border-none bg-secondary-background px-2 font-inter font-medium text-base-foreground transition-colors hover:bg-secondary-background-hover focus-visible:ring-1 focus-visible:ring-border-default focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
+        const icon = element("span");
+        icon.className = "icon-[lucide--folder-open] size-4 shrink-0";
+        icon.setAttribute("aria-hidden", "true");
+        button.append(icon, element("span", "Открыть папку"));
         const status = element("small");
         status.className = "text-muted-foreground";
         status.setAttribute("role", "status");
@@ -108,11 +117,28 @@ export function installResultActions(speechNodes) {
     };
     const style = element("style");
     style.textContent = `
-        .speech-result-actions { display: flex; flex-direction: column; align-items: flex-start; gap: .35rem; padding: .5rem .75rem; overflow: hidden; }
-        .speech-result-path, .speech-result-files { max-width: 100%; overflow-wrap: anywhere; }
-        .speech-result-files { display: grid; gap: .15rem; margin: 0; padding-inline-start: .85rem; list-style: none; }
+        .speech-result-actions {
+            box-sizing: border-box; display: grid; justify-items: start; gap: .25rem;
+            min-width: 0; padding: .375rem .5rem; font-size: .75rem; line-height: 1rem;
+        }
+        .speech-result-heading { margin: 0; font: inherit; font-weight: 500; }
+        .speech-result-path { max-width: 100%; overflow-wrap: anywhere; user-select: text; }
+        .speech-result-files { display: grid; gap: .125rem; max-width: 100%; margin: 0; padding: 0; list-style: none; }
+        .speech-result-files > li { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .375rem; overflow-wrap: anywhere; }
+        .speech-result-branch { font-family: var(--font-mono, monospace); user-select: none; }
+        .speech-result-link { color: inherit; text-decoration: none; }
+        .speech-result-link:is(:hover, :focus-visible) { text-decoration: underline; text-underline-offset: .15em; }
+        .speech-result-button { min-height: 1.5rem; margin-top: .25rem; font-size: inherit; }
         .speech-result-actions [role="status"]:empty { display: none; }
-        ${panelSelector} > .speech-result-actions { margin: 3.25rem .75rem 0; flex-shrink: 0; position: relative; z-index: 2; border: 1px solid var(--color-border-subtle); border-radius: .5rem; }
+        .speech-result-card {
+            flex-shrink: 0; position: relative; z-index: 2;
+            width: fit-content; max-width: min(34rem, calc(100% - 1.5rem)); margin: 3.25rem .75rem 0;
+            padding: .625rem .75rem; background: var(--base-background, Canvas);
+            border: 1px solid var(--border-subtle, transparent); border-radius: var(--radius-xl, .75rem);
+            font-size: .875rem; line-height: 1.25rem;
+        }
+        .speech-result-card .speech-result-heading { font-size: 1rem; line-height: 1.5rem; font-weight: 700; }
+        .speech-result-card .speech-result-button { min-height: 1.75rem; }
     `;
     document.head.append(style);
     api.addEventListener("executed", ({ detail }) => {
