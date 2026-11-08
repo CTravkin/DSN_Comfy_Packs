@@ -22,9 +22,20 @@ def read_text(root: Path, name: str, formats: set[str]) -> str:
         raise ValueError(f'Не удалось прочитать файл UTF-8: {relative.name}') from None
 
 
-def collect_text(root: Path, file_list: str, source: str) -> str:
+def list_material_files(root: Path) -> list[str]:
+    root = root.resolve()
+    return sorted((
+        path.relative_to(root).as_posix()
+        for path in root.rglob('*')
+        if path.suffix.lower() in MATERIAL_FORMATS and path.is_file()
+        and path.resolve().is_relative_to(root)
+    ), key=str.casefold)
+
+
+def collect_text(root: Path, file_list: str | list[str], source: str) -> str:
     parts = [source] if source.strip() else []
-    for name in file_list.splitlines():
+    names = file_list.splitlines() if isinstance(file_list, str) else file_list
+    for name in names:
         if name.strip():
             text = read_text(root, name, MATERIAL_FORMATS)
             filename = Path(name.strip().strip('"')).name

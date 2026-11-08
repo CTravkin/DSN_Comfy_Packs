@@ -30,12 +30,18 @@ class TextTests(unittest.TestCase):
             self.assertEqual(config.prompts, Path(tmp).resolve() / 'templates')
 
     def test_materials_keep_file_order_and_reject_folders_and_escape(self):
-        from Text.files import collect_text
+        from Text.files import collect_text, list_material_files
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / 'table.csv').write_text('имя,сумма\nтест,1', encoding='utf-8-sig')
             (root / 'note.md').write_text('Заметка', encoding='utf-8')
+            (root / 'other.pdf').touch()
+            (root / 'nested').mkdir()
+            (root / 'nested/data.JSON').write_text('{}', encoding='utf-8')
+            self.assertEqual(list_material_files(root), ['nested/data.JSON', 'note.md', 'table.csv'])
+            self.assertEqual(collect_text(root, ['table.csv', 'note.md'], 'Транскрипт'),
+                             'Транскрипт\n\n## table.csv\n\nимя,сумма\nтест,1\n\n## note.md\n\nЗаметка')
             self.assertEqual(collect_text(root, 'table.csv\nnote.md', 'Транскрипт'),
                              'Транскрипт\n\n## table.csv\n\nимя,сумма\nтест,1\n\n## note.md\n\nЗаметка')
             for name in ('..', '../outside.txt', 'unknown.pdf'):
@@ -95,3 +101,21 @@ class TextTests(unittest.TestCase):
                 asyncio.run(generate(Request(server, 'gemma', 0.2, 32, True), 'Промпт'))
             stop.assert_awaited_once_with(process)
             self.assertNotIn(address, owned)
+
+    def test_library_groups_one_model_across_server_profiles(self):
+        from Text.config import load_config
+        from Text.library import model_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'config.json'
+            path.write_text(json.dumps({
+                'models': {'gemma': 'Gemma', 'unused': 'Unused'},
+                'servers': {
+                    'local': {'url': 'http://127.0.0.1:9931/v1', 'models': {'gemma': 'local-id'}},
+                    'other': {'url': 'http://127.0.0.1:1234/v1', 'models': {'gemma': 'other-id'}},
+                },
+            }), encoding='utf-8')
+            entries = model_entries(load_config(path))
+            self.assertEqual([(item['id'], item['name'], item['profiles']) for item in entries], [
+                ('gemma', 'Gemma', {'local': 'local-id', 'other': 'other-id'}),
+            ])

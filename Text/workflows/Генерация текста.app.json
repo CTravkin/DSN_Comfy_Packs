@@ -8,12 +8,12 @@
       "id": 1,
       "type": "DSNTextRequestSetup",
       "pos": [
-        260,
-        125
+        210,
+        140
       ],
       "size": [
-        365,
-        180
+        380,
+        230
       ],
       "flags": {},
       "order": 0,
@@ -50,12 +50,12 @@
       "id": 2,
       "type": "DSNTextPrompt",
       "pos": [
-        260,
-        365
+        710,
+        240
       ],
       "size": [
-        365,
-        215
+        380,
+        250
       ],
       "flags": {},
       "order": 1,
@@ -104,14 +104,14 @@
     },
     {
       "id": 3,
-      "type": "fe86fac1-a306-4f6b-9e28-b8dd47d8f6b0",
+      "type": "DSNTextContext",
       "pos": [
-        260,
-        595
+        710,
+        640
       ],
       "size": [
-        370,
-        165
+        380,
+        170
       ],
       "flags": {},
       "order": 2,
@@ -127,9 +127,9 @@
         },
         {
           "name": "files",
-          "type": "STRING",
-          "label": "Файлы",
-          "localized_name": "Файлы",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "label": "Количество файлов",
+          "localized_name": "Количество файлов",
           "widget": {
             "name": "files"
           },
@@ -148,29 +148,26 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "fe86fac1-a306-4f6b-9e28-b8dd47d8f6b0",
-        "proxyWidgets": [
-          [
-            "-1",
-            "files"
-          ]
-        ]
+        "Node name for S&R": "DSNTextContext"
       },
       "widgets_values": [
-        ""
+        "Без файлов"
       ],
-      "title": "Text Context"
+      "title": "Text Context",
+      "widgets_values_named": {
+        "files": "Без файлов"
+      }
     },
     {
       "id": 4,
       "type": "DSNTextResultSetup",
       "pos": [
-        680,
-        550
+        210,
+        500
       ],
       "size": [
-        360,
-        215
+        380,
+        270
       ],
       "flags": {},
       "order": 3,
@@ -178,22 +175,12 @@
       "showAdvanced": false,
       "inputs": [
         {
-          "name": "txt",
-          "type": "BOOLEAN",
-          "label": "Сохранить TXT",
-          "localized_name": "Сохранить TXT",
+          "name": "directory",
+          "type": "STRING",
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
           "widget": {
-            "name": "txt"
-          },
-          "link": null
-        },
-        {
-          "name": "md",
-          "type": "BOOLEAN",
-          "label": "Сохранить MD",
-          "localized_name": "Сохранить MD",
-          "widget": {
-            "name": "md"
+            "name": "directory"
           },
           "link": null
         },
@@ -218,12 +205,22 @@
           "link": null
         },
         {
-          "name": "directory",
-          "type": "STRING",
-          "label": "Каталог результатов",
-          "localized_name": "Каталог результатов",
+          "name": "txt",
+          "type": "BOOLEAN",
+          "label": "Сохранить TXT",
+          "localized_name": "Сохранить TXT",
           "widget": {
-            "name": "directory"
+            "name": "txt"
+          },
+          "link": null
+        },
+        {
+          "name": "md",
+          "type": "BOOLEAN",
+          "label": "Сохранить MD",
+          "localized_name": "Сохранить MD",
+          "widget": {
+            "name": "md"
           },
           "link": null
         }
@@ -243,23 +240,30 @@
         "Node name for S&R": "DSNTextResultSetup"
       },
       "widgets_values": [
-        false,
-        false,
+        "",
         "",
         true,
-        ""
-      ]
+        true,
+        true
+      ],
+      "widgets_values_named": {
+        "directory": "",
+        "name": "",
+        "include_datetime": true,
+        "txt": true,
+        "md": true
+      }
     },
     {
       "id": 5,
       "type": "DSNTextGenerate",
       "pos": [
-        830,
-        195
+        1210,
+        140
       ],
       "size": [
-        335,
-        195
+        380,
+        450
       ],
       "flags": {},
       "order": 4,
@@ -354,10 +358,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.85,
+      "scale": 1,
       "offset": [
-        20,
-        25
+        280,
+        16
       ]
     },
     "linearMode": true,
@@ -392,12 +396,36 @@
           "files"
         ],
         [
-          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:txt",
-          "txt"
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_1",
+          "files.file_1"
         ],
         [
-          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:md",
-          "md"
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_2",
+          "files.file_2"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_3",
+          "files.file_3"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_4",
+          "files.file_4"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_5",
+          "files.file_5"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_6",
+          "files.file_6"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_7",
+          "files.file_7"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_8",
+          "files.file_8"
         ],
         [
           "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:name",
@@ -406,6 +434,14 @@
         [
           "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:include_datetime",
           "include_datetime"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:txt",
+          "txt"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:md",
+          "md"
         ]
       ],
       "outputs": [
@@ -413,168 +449,5 @@
       ]
     }
   },
-  "version": 0.4,
-  "definitions": {
-    "subgraphs": [
-      {
-        "id": "fe86fac1-a306-4f6b-9e28-b8dd47d8f6b0",
-        "version": 1,
-        "state": {
-          "lastGroupId": 0,
-          "lastNodeId": 1,
-          "lastLinkId": 3,
-          "lastRerouteId": 0
-        },
-        "revision": 0,
-        "config": {},
-        "name": "Text Context",
-        "inputNode": {
-          "id": -10,
-          "bounding": [
-            0,
-            70,
-            165,
-            85
-          ]
-        },
-        "outputNode": {
-          "id": -20,
-          "bounding": [
-            640,
-            70,
-            135,
-            60
-          ]
-        },
-        "inputs": [
-          {
-            "id": "075ac676-4547-496c-aae4-02bb3f94af6c",
-            "name": "source",
-            "label": "Исходный текст",
-            "type": "STRING",
-            "linkIds": [
-              1
-            ],
-            "pos": [
-              147,
-              90
-            ]
-          },
-          {
-            "id": "f5e0883d-c722-40af-b447-22a0fa538ab3",
-            "name": "files",
-            "label": "Файлы",
-            "type": "STRING",
-            "linkIds": [
-              2
-            ],
-            "pos": [
-              147,
-              115
-            ]
-          }
-        ],
-        "outputs": [
-          {
-            "id": "f74658fb-8449-4afe-9b91-42351c3f6e3f",
-            "name": "materials",
-            "label": "Материалы",
-            "type": "STRING",
-            "linkIds": [
-              3
-            ],
-            "pos": [
-              660,
-              90
-            ]
-          }
-        ],
-        "widgets": [],
-        "nodes": [
-          {
-            "id": 1,
-            "type": "DSNTextCollect",
-            "pos": [
-              205,
-              60
-            ],
-            "size": [
-              390,
-              180
-            ],
-            "flags": {},
-            "order": 0,
-            "mode": 0,
-            "showAdvanced": false,
-            "inputs": [
-              {
-                "name": "source",
-                "type": "STRING",
-                "label": "Исходный текст",
-                "localized_name": "Исходный текст",
-                "link": 1
-              },
-              {
-                "name": "files",
-                "type": "STRING",
-                "label": "Файлы",
-                "localized_name": "Файлы",
-                "widget": {
-                  "name": "files"
-                },
-                "link": 2
-              }
-            ],
-            "outputs": [
-              {
-                "name": "Материалы",
-                "type": "STRING",
-                "label": "Материалы",
-                "localized_name": "Материалы",
-                "links": [
-                  3
-                ]
-              }
-            ],
-            "properties": {
-              "Node name for S&R": "DSNTextCollect"
-            },
-            "widgets_values": [
-              ""
-            ]
-          }
-        ],
-        "groups": [],
-        "links": [
-          {
-            "id": 1,
-            "origin_id": -10,
-            "origin_slot": 0,
-            "target_id": 1,
-            "target_slot": 0,
-            "type": "STRING"
-          },
-          {
-            "id": 2,
-            "origin_id": -10,
-            "origin_slot": 1,
-            "target_id": 1,
-            "target_slot": 1,
-            "type": "STRING"
-          },
-          {
-            "id": 3,
-            "origin_id": 1,
-            "origin_slot": 0,
-            "target_id": -20,
-            "target_slot": 0,
-            "type": "STRING"
-          }
-        ],
-        "extra": {
-          "workflowRendererVersion": "LG"
-        }
-      }
-    ]
-  }
+  "version": 0.4
 }

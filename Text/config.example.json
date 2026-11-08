@@ -13,8 +13,8 @@
         "gemma": "gemma",
         "qwen": "qwen"
       },
-      "temperature": 0.3,
-      "max_tokens": 1024
+      "temperature": 0.8,
+      "max_tokens": 8000
     }
   }
 }

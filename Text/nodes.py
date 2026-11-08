@@ -9,13 +9,16 @@ from comfy_api.latest import io, ui
 
 from .client import Request, generate
 from .config import load_config
-from .files import PROMPT_FORMATS, ResultSettings, collect_text, export_text, read_text
+from .files import PROMPT_FORMATS, ResultSettings, collect_text, export_text, list_material_files, read_text
 
 
 RequestOptions = io.Custom('DSN_TEXT_REQUEST')
 SaveOptions = io.Custom('DSN_TEXT_SAVE')
 NO_SERVER = 'Серверы не настроены'
 NO_MODEL = 'Нет моделей'
+NO_FILE = 'Не выбран'
+FILE_COUNTS = ['Без файлов', '1 файл', '2 файла', '3 файла', '4 файла',
+               '5 файлов', '6 файлов', '7 файлов', '8 файлов']
 
 
 def toggle(key, title, default=False, **kwargs):
@@ -34,21 +37,22 @@ class RequestSetup(io.ComfyNode):
         options = [
             io.DynamicCombo.Option(server.name, [
                 io.Combo.Input('model', list(server.models), display_name='Модель',
-                               tooltip='Модели выбранного сервера из конфига'),
+                               tooltip='Модели, указанные для выбранного сервера в конфигурации пакета Text'),
                 toggle('stop_after', 'Остановить после запроса',
-                       tooltip='Остановка сервера, запущенного пакетом Text'),
+                       tooltip='После запроса останавливается только сервер, запущенный пакетом Text'),
                 io.Float.Input('temperature', display_name='Температура', default=server.temperature,
                                min=0, max=2, step=0.01, advanced=True,
-                               tooltip='Чем выше значение, тем разнообразнее ответ'),
+                               tooltip='Низкие значения делают ответ более предсказуемым, высокие — более разнообразным'),
                 io.Int.Input('max_tokens', display_name='Лимит токенов ответа', default=server.max_tokens,
-                             min=1, max=262144, advanced=True, tooltip='Максимальная длина ответа в токенах'),
+                             min=1, max=262144, advanced=True,
+                             tooltip='Максимальное число токенов, которое модель может сгенерировать для ответа'),
             ]) for server in servers.values()
         ]
         if not options:
             options = [io.DynamicCombo.Option(NO_SERVER, [io.Combo.Input('model', [NO_MODEL], display_name='Модель')])]
         return io.Schema(node_id='DSNTextRequestSetup', display_name='Request Setup', category='Text',
                          inputs=[io.DynamicCombo.Input('profile', options, display_name='Сервер',
-                                                       tooltip='Профиль подключения из конфига')],
+                                                       tooltip='Профиль подключения к серверу из конфигурации пакета Text')],
                          outputs=[RequestOptions.Output('request', display_name='Настройки запроса')])
 
     @classmethod
@@ -59,7 +63,7 @@ class RequestSetup(io.ComfyNode):
     def execute(cls, profile):
         server = load_config().servers.get(profile['profile'])
         if server is None:
-            raise ValueError('Добавьте профиль сервера и модели в конфиг Text')
+            raise ValueError('В конфигурации Text требуется профиль сервера с моделями')
         model = server.models.get(profile['model'])
         if model is None:
             raise ValueError('Выбранная модель отсутствует в профиле сервера')
@@ -73,10 +77,12 @@ class Prompt(io.ComfyNode):
         return io.Schema(node_id='DSNTextPrompt', display_name='Prompt', category='Text', inputs=[
             io.DynamicCombo.Input('source', [
                 io.DynamicCombo.Option('Текст', [io.String.Input(
-                    'text', display_name='Промпт', default='', multiline=True, tooltip='Задание для модели')]),
+                    'text', display_name='Промпт', default='', multiline=True,
+                    tooltip='Задание и требования к ответу модели')]),
                 io.DynamicCombo.Option('Файл', [io.String.Input(
-                    'file', display_name='Файл промпта', default='', tooltip='Путь к TXT или MD в каталоге промптов')]),
-            ], display_name='Источник', tooltip='Текст из поля или файла'),
+                    'file', display_name='Файл промпта', default='',
+                    tooltip='Относительный путь к файлу TXT или MD в каталоге промптов пакета Text')]),
+            ], display_name='Источник', tooltip='Способ задания промпта: текст в поле или содержимое файла'),
         ], outputs=[io.String.Output('prompt', display_name='Промпт')])
 
     @staticmethod
@@ -100,11 +106,11 @@ class Prompt(io.ComfyNode):
 class CollectText(io.ComfyNode):
     @classmethod
     def define_schema(cls):
-        return io.Schema(node_id='DSNTextCollect', display_name='Collect Text', category='Text', inputs=[
+        return io.Schema(node_id='DSNTextCollect', display_name='Collect Text', category='Text', is_deprecated=True, inputs=[
             io.String.Input('source', display_name='Исходный текст', optional=True, force_input=True,
                             tooltip='Дополнительный текст из графа'),
             io.String.Input('files', display_name='Файлы', default='', multiline=True,
-                            tooltip='Пути к TXT, MD, JSON или CSV в Input Comfy, по одному на строку'),
+                            tooltip='Относительные пути к файлам в общей папке Input, по одному на строку'),
         ], outputs=[io.String.Output('materials', display_name='Материалы')])
 
     @classmethod
@@ -116,22 +122,59 @@ class CollectText(io.ComfyNode):
         return io.NodeOutput(collect_text(Path(folder_paths.get_input_directory()), files, source))
 
 
+class TextContext(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        options = [NO_FILE, *list_material_files(Path(folder_paths.get_input_directory()))]
+        counts = [
+            io.DynamicCombo.Option(label, [
+                io.Combo.Input(f'file_{index}', options, display_name=f'Файл {index}', default=NO_FILE,
+                               tooltip='Файл TXT, MD, JSON или CSV из общей папки Input Comfy')
+                for index in range(1, count + 1)
+            ]) for count, label in enumerate(FILE_COUNTS)
+        ]
+        return io.Schema(
+            node_id='DSNTextContext', display_name='Text Context', category='Text',
+            description='Объединяет исходный текст и содержимое выбранных файлов в материалы для Generate Text.',
+            inputs=[
+                io.String.Input('source', display_name='Исходный текст', optional=True, force_input=True,
+                                tooltip='Текст из графа перед выбранными файлами'),
+                io.DynamicCombo.Input('files', counts, display_name='Количество файлов',
+                                      tooltip='Открывает поля выбора файлов из общей папки Input. Материалы передаются по порядку полей'),
+            ],
+            outputs=[io.String.Output('materials', display_name='Материалы')],
+        )
+
+    @staticmethod
+    def _read(files, source):
+        names = [files.get(f'file_{index}') for index in range(1, len(FILE_COUNTS))]
+        return collect_text(Path(folder_paths.get_input_directory()), [name for name in names if name and name != NO_FILE], source)
+
+    @classmethod
+    def fingerprint_inputs(cls, files, **kwargs):
+        return digest(cls._read(files, ''))
+
+    @classmethod
+    def execute(cls, files, source=''):
+        return io.NodeOutput(cls._read(files, source))
+
+
 class ResultSetup(io.ComfyNode):
     @classmethod
     def define_schema(cls):
         return io.Schema(node_id='DSNTextResultSetup', display_name='Result Setup', category='Text', inputs=[
-            toggle('txt', 'Сохранить TXT', tooltip='Текстовый файл в каталоге результатов'),
-            toggle('md', 'Сохранить MD', tooltip='Файл Markdown в каталоге результатов'),
-            io.String.Input('name', display_name='Имя результата', default='',
-                            tooltip='Общее имя папки запуска и файлов'),
-            toggle('include_datetime', 'Дата и время в имени', True,
-                   tooltip='Дата и время запуска в имени папки и файлов'),
             io.String.Input('directory', display_name='Каталог результатов', default='', advanced=True,
-                            tooltip='Родительский каталог папки запуска, пустое поле означает Output Comfy'),
+                            tooltip='Каталог для папок запуска. Пустое поле использует общий Output Comfy'),
+            io.String.Input('name', display_name='Имя результата', default='',
+                            tooltip='Общее имя папки запуска и файлов. При совпадении имени файлы добавляются в существующую папку'),
+            toggle('include_datetime', 'Дата и время в имени', True,
+                   tooltip='Добавляет дату и время запуска к имени папки и файлов'),
+            toggle('txt', 'Сохранить TXT', True, tooltip='Сохраняет ответ в текстовый файл .txt'),
+            toggle('md', 'Сохранить MD', True, tooltip='Сохраняет ответ в файл Markdown .md'),
         ], outputs=[SaveOptions.Output('save', display_name='Настройки сохранения')])
 
     @classmethod
-    def execute(cls, txt=False, md=False, name='', include_datetime=True, directory=''):
+    def execute(cls, directory='', name='', include_datetime=True, txt=True, md=True):
         output = Path(folder_paths.get_output_directory()).resolve()
         path = Path(directory.strip().strip('"')).expanduser()
         root = (output / path).resolve()
@@ -163,6 +206,7 @@ def presentation(text, finish, exports, view_key):
     summary = 'Ответ обрезан' if finish == 'length' else 'Текст готов'
     return {'text': [summary], 'files': files, 'dsn_text_result': [
         view_key, str(exports[0].parent) if exports else '', ', '.join(p.name for p in exports),
+        text[:1600] + ('…' if len(text) > 1600 else ''),
     ]}
 
 
@@ -195,4 +239,4 @@ class GenerateText(io.ComfyNode):
         return io.NodeOutput(text, finish, ui=presentation(text, finish, exports, view_key))
 
 
-NODES = [RequestSetup, Prompt, CollectText, ResultSetup, GenerateText]
+NODES = [RequestSetup, Prompt, TextContext, ResultSetup, GenerateText, CollectText]

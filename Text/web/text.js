@@ -8,14 +8,56 @@ const labels = {
     "profile.max_tokens": "Лимит токенов ответа",
     "source.text": "Промпт",
     "source.file": "Файл промпта",
+    ...Object.fromEntries(Array.from({ length: 8 }, (_, index) =>
+        [`files.file_${index + 1}`, `Файл ${index + 1}`])),
 };
-const dynamicNodes = { DSNTextRequestSetup: "profile", DSNTextPrompt: "source" };
+const dynamicNodes = { DSNTextRequestSetup: "profile", DSNTextPrompt: "source", DSNTextContext: "files" };
+const resultFields = ["directory", "name", "include_datetime", "txt", "md"];
+const textNodes = new Set([...Object.keys(dynamicNodes), "DSNTextResultSetup", "DSNTextGenerate"]);
+const inputSpecs = new Map();
 const resultType = "DSNTextGenerate";
 const panelSelector = '[data-testid="linear-center-panel"]';
 let viewKey = crypto.randomUUID();
 let appResult;
 let resultPanel;
 let resultCard;
+
+function migrateResultFields(graph) {
+    for (const node of graph.nodes ?? []) {
+        if (node.type !== "DSNTextResultSetup" || !Array.isArray(node.inputs)) continue;
+        const names = node.inputs.map(input => input.name);
+        if (names.join() !== "txt,md,name,include_datetime,directory") continue;
+        const order = resultFields.map(name => names.indexOf(name));
+        node.inputs = order.map(index => node.inputs[index]);
+        if (node.widgets_values?.length === names.length) {
+            node.widgets_values = order.map(index => node.widgets_values[index]);
+        }
+        for (const link of graph.links ?? []) {
+            if (Array.isArray(link) && String(link[3]) === String(node.id)) {
+                link[4] = order.indexOf(link[4]);
+            } else if (!Array.isArray(link) && String(link.target_id) === String(node.id)) {
+                link.target_slot = order.indexOf(link.target_slot);
+            }
+        }
+    }
+    for (const subgraph of graph.definitions?.subgraphs ?? []) migrateResultFields(subgraph);
+}
+
+function inputTooltip(type, name) {
+    const specs = inputSpecs.get(type);
+    if (specs?.[name]) return specs[name][1]?.tooltip;
+    const [group, field] = name.split(".");
+    if (!field) return;
+    for (const { inputs } of specs?.[group]?.[1]?.options ?? []) {
+        const spec = inputs.required?.[field] ?? inputs.optional?.[field];
+        if (spec?.[1]?.tooltip) return spec[1].tooltip;
+    }
+}
+
+async function catalog() {
+    const response = await api.fetchApi("/text/models");
+    return response.ok ? await response.json() : [];
+}
 
 function labelFields(node) {
     // The DynamicCombo frontend uses the nested input ID as its display name.
@@ -27,11 +69,17 @@ function labelFields(node) {
     }
 }
 
-function resultContent(container, message) {
+function resultContent(container, message, showPreview = false) {
     const title = document.createElement("strong");
     title.textContent = message.text?.[0] ?? "Текст готов";
     container.replaceChildren(title);
-    const [, directory, names] = message.dsn_text_result;
+    const [, directory, names, preview] = message.dsn_text_result;
+    if (showPreview && preview) {
+        const paragraph = document.createElement("div");
+        paragraph.className = "my-2 max-h-40 overflow-auto whitespace-pre-wrap break-words select-text";
+        paragraph.textContent = preview;
+        container.append(paragraph);
+    }
     if (!directory) return;
     const path = document.createElement("div");
     path.textContent = directory;
@@ -75,6 +123,29 @@ function updateAppResult() {
 app.registerExtension({
     name: "DSN.Text",
     setup() {
+        const style = document.createElement("style");
+        style.textContent = `
+            [data-dsn-text-help] > [data-testid="app-mode-widget-description"] {
+                height: auto;
+                min-height: 1.25rem;
+                font-size: 0.75rem;
+                line-height: 1rem;
+            }
+            [data-dsn-text-help] > [data-testid="app-mode-widget-description"] .truncate {
+                overflow: visible;
+                text-overflow: clip;
+                white-space: normal;
+            }
+        `;
+        document.head.append(style);
+        const getModels = api.getModels.bind(api);
+        api.getModels = async (category, ...args) => category === "Text"
+            ? (await catalog()).map(model => ({ name: model.filename, pathIndex: 0 }))
+            : getModels(category, ...args);
+        const viewMetadata = api.viewMetadata.bind(api);
+        api.viewMetadata = async (category, filename, ...args) => category === "Text"
+            ? (await catalog()).find(model => model.filename === filename)?.metadata ?? null
+            : viewMetadata(category, filename, ...args);
         const queuePrompt = api.queuePrompt;
         api.queuePrompt = function(number, prompt, ...args) {
             if (prompt.workflow && Object.values(prompt.output ?? {}).some(node => node.class_type === resultType)) {
@@ -93,7 +164,26 @@ app.registerExtension({
         });
         new MutationObserver(() => {
             if (document.querySelector(panelSelector) !== resultPanel) updateAppResult();
-        }).observe(document.body, { childList: true, subtree: true });
+            for (const row of document.querySelectorAll('[data-testid="app-mode-widget-item"]')) {
+                const parts = (row.dataset.widgetKey ?? "").split(":");
+                const node = app.rootGraph?.getNodeById?.(parts[1]);
+                row.toggleAttribute("data-dsn-text-help", textNodes.has(node?.type));
+            }
+        }).observe(document.body, {
+            childList: true, subtree: true, attributes: true, attributeFilter: ["data-widget-key"],
+        });
+    },
+    beforeConfigureGraph(graph) {
+        migrateResultFields(graph);
+        const nodes = new Map((graph.nodes ?? []).map(node => [String(node.id), node.type]));
+        for (const entry of graph.extra?.linearData?.inputs ?? []) {
+            if (!Array.isArray(entry)) continue;
+            const [key, name, config] = entry;
+            const parts = String(key).split(":");
+            const id = parts.length === 1 ? parts[0] : parts[1];
+            const tooltip = inputTooltip(nodes.get(id), name);
+            if (tooltip) entry[2] = { ...config, description: tooltip };
+        }
     },
     afterConfigureGraph() {
         viewKey = crypto.randomUUID();
@@ -101,6 +191,9 @@ app.registerExtension({
         updateAppResult();
     },
     beforeRegisterNodeDef(nodeType, nodeData) {
+        if (textNodes.has(nodeData.name)) {
+            inputSpecs.set(nodeData.name, { ...nodeData.input.required, ...nodeData.input.optional });
+        }
         const dynamicName = dynamicNodes[nodeData.name];
         if (dynamicName) {
             const onCreated = nodeType.prototype.onNodeCreated;
@@ -137,7 +230,7 @@ app.registerExtension({
                     this.addDOMWidget("Результат", "dsn-text-result", this.dsnTextResult,
                                       { serialize: false, hideOnZoom: true });
                 }
-                resultContent(this.dsnTextResult, message);
+                resultContent(this.dsnTextResult, message, true);
                 this.setDirtyCanvas(true, true);
             };
         }
