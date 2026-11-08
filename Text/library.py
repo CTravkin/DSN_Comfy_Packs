@@ -5,6 +5,7 @@ import logging
 import os
 from pathlib import Path
 import re
+from tempfile import NamedTemporaryFile
 
 from .config import load_config
 
@@ -13,7 +14,10 @@ CATEGORY = 'Text'
 TAGS = {'models', 'model_type:Text', 'text-catalog'}
 ENTRY_PATTERN = re.compile(r'text-[0-9a-f]{24}\.json')
 MANIFEST_FIELDS = ('source', 'revision', 'format', 'family')
-MANAGED_METADATA = {*MANIFEST_FIELDS, 'weights_size_bytes', 'url', 'modelspec.author', 'modelspec.architecture'}
+SYSTEM_TAGS = TAGS | {'uploaded', 'missing', 'preview'}
+MANAGED_METADATA = {*MANIFEST_FIELDS, 'filename', 'description', 'model_id', 'profiles', 'weights_size_bytes',
+                    'url', 'modelspec.title', 'modelspec.description', 'modelspec.author', 'modelspec.architecture'}
+CONFLICTS = '_text_catalog_conflicts'
 
 
 def model_details(path):
@@ -71,6 +75,39 @@ def metadata(entry):
     }
 
 
+def merge_annotations(details, previous=None):
+    tags, values = set(), {}
+    records = [(detail.tags, detail.ref.user_metadata or {}) for detail in details]
+    if previous is not None:
+        records.insert(0, (previous['tags'], previous['metadata']))
+    for record_tags, fields in records:
+        tags.update(tag for tag in record_tags if tag not in SYSTEM_TAGS and not tag.startswith('model_type:'))
+        for key, value in fields.items():
+            if key in MANAGED_METADATA or key == CONFLICTS:
+                continue
+            variants = values.setdefault(key, [])
+            for candidate in (value, *fields.get(CONFLICTS, {}).get(key, ())):
+                if candidate not in variants:
+                    variants.append(candidate)
+    merged = {key: variants[0] for key, variants in values.items()}
+    conflicts = {key: variants for key, variants in values.items() if len(variants) > 1}
+    if conflicts:
+        merged[CONFLICTS] = conflicts
+    return {'tags': sorted(tags), 'metadata': merged}
+
+
+def write_annotations(path, annotations):
+    stream = NamedTemporaryFile('w', dir=path.parent, encoding='utf-8', suffix='.tmp', delete=False)
+    temporary = Path(stream.name)
+    try:
+        with stream:
+            json.dump(annotations, stream, ensure_ascii=False, indent=2)
+            stream.write('\n')
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def register_assets(config, entries):
     from app.assets.database.models import Asset, AssetContent
     from app.assets.services import delete_asset_reference, get_asset_detail, register_file_in_place, update_asset_metadata
@@ -82,6 +119,9 @@ def register_assets(config, entries):
         root.mkdir(parents=True, exist_ok=True)
     if not root.is_dir():
         return
+    annotations_path = root.parent / f'{root.name or "text-model-catalog"}-annotations.json'
+    original = json.loads(annotations_path.read_text(encoding='utf-8')) if annotations_path.exists() else {}
+    annotations = original.copy()
     with create_session() as session:
         rows = session.execute(
             select(Asset.id, AssetContent.path).join(AssetContent, Asset.content_id == AssetContent.id)
@@ -110,30 +150,35 @@ def register_assets(config, entries):
         desired.add(path)
 
         details = sorted(existing.get(path, ()), key=lambda detail: 'text-catalog' not in detail.tags)
+        saved = annotations.pop(path.name, None)
+        # A current managed card reflects manual edits, including explicit removals.
+        user = merge_annotations(details, saved if not details or 'text-catalog' not in details[0].tags else None)
         if details:
-            detail = details[0]
-            ref_id = detail.ref.id
-            user_metadata = dict(detail.ref.user_metadata or {})
-            tags = set(detail.tags)
+            ref_id = details[0].ref.id
         else:
             ref_id = register_file_in_place(
                 str(path), entry['name'], sorted(TAGS), 'application/json', content_written=False,
             ).ref.id
-            user_metadata = {}
-            tags = set()
-        for key in MANAGED_METADATA:
-            user_metadata.pop(key, None)
-        user_metadata.update(metadata(entry))
-        update_asset_metadata(ref_id, name=entry['name'], tags=sorted(tags | TAGS), user_metadata=user_metadata)
+        update_asset_metadata(ref_id, name=entry['name'], tags=sorted(set(user['tags']) | TAGS),
+                              user_metadata={**user['metadata'], **metadata(entry)})
         for duplicate in details[1:]:
             if 'text-catalog' in duplicate.tags:
                 delete_asset_reference(duplicate.ref.id)
 
+    retired = []
     for path, details in existing.items():
-        if path not in desired:
-            for detail in details:
-                if 'text-catalog' in detail.tags:
-                    delete_asset_reference(detail.ref.id)
+        managed = [detail for detail in details if 'text-catalog' in detail.tags]
+        if path not in desired and managed:
+            user = merge_annotations(details)
+            if user['tags'] or user['metadata']:
+                annotations[path.name] = user
+            else:
+                annotations.pop(path.name, None)
+            retired.extend(managed)
+    if annotations != original:
+        write_annotations(annotations_path, annotations)
+    for detail in retired:
+        delete_asset_reference(detail.ref.id)
     for path in root.glob('text-*.json'):
         if path in desired or path.is_symlink() or not ENTRY_PATTERN.fullmatch(path.name):
             continue
