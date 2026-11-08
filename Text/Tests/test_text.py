@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -75,3 +75,23 @@ class TextTests(unittest.TestCase):
                 stop.assert_not_called()
             with self.assertRaisesRegex(RuntimeError, 'missing'):
                 asyncio.run(generate(Request(server, 'missing', 0.2, 32, False), 'Промпт'))
+
+    def test_missing_key_stops_an_owned_server(self):
+        from Text.client import Request, generate
+        from Text.config import Server
+
+        address = '127.0.0.1:9931'
+        key = 'DSN_TEXT_TEST_MISSING_KEY'
+        server = Server('Проверка', f'http://{address}/v1', {'Gemma': 'gemma'}, api_key_env=key)
+        process = Mock()
+        process.poll.return_value = None
+        with (
+            patch.dict('os.environ') as env,
+            patch.dict('Text.client._owned', {address: process}, clear=True) as owned,
+            patch('Text.client.stop_process', new_callable=AsyncMock) as stop,
+        ):
+            env.pop(key, None)
+            with self.assertRaisesRegex(RuntimeError, key):
+                asyncio.run(generate(Request(server, 'gemma', 0.2, 32, True), 'Промпт'))
+            stop.assert_awaited_once_with(process)
+            self.assertNotIn(address, owned)

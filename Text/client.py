@@ -119,13 +119,13 @@ async def generate(request: Request, prompt: str, materials: str = '', *, check_
             _owned.pop(key)
         existing = _owned.get(key)
         ready = False
-        headers = {}
-        if server.api_key_env:
-            secret = os.environ.get(server.api_key_env)
-            if not secret:
-                raise RuntimeError(f'Не задана переменная ключа {server.api_key_env}')
-            headers['Authorization'] = f'Bearer {secret}'
         try:
+            headers = {}
+            if server.api_key_env:
+                secret = os.environ.get(server.api_key_env)
+                if not secret:
+                    raise RuntimeError(f'Не задана переменная ключа {server.api_key_env}')
+                headers['Authorization'] = f'Bearer {secret}'
             async with aiohttp.ClientSession(headers=headers) as session:
                 catalog = await models_when_ready(session, server, key, check_cancel)
                 ready = True
