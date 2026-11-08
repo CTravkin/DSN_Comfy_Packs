@@ -167,6 +167,7 @@ export function installResults() {
         .text-result-files { display: grid; gap: .125rem; max-width: 100%; margin: 0; padding: 0; list-style: none; }
         .text-result-error { overflow-wrap: anywhere; }
         .text-result-preview {
+            margin-block-start: .25rem;
             width: 100%; max-height: 12rem; overflow: auto;
             white-space: pre-wrap; overflow-wrap: anywhere; user-select: text;
         }
