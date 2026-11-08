@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
-AI_ROOT = Path(os.environ.get('SPEECH_AI_ROOT') or Path.home() / '.dsn-comfy' / 'speech').expanduser().resolve()
-MODELS_ROOT = AI_ROOT / 'Models'
-CATALOG_ROOT = AI_ROOT / 'Data' / 'Comfy' / 'model-catalog'
+from .config import load_config
+
+CONFIG = load_config()
+AI_ROOT = CONFIG.root
+CATALOG_ROOT = CONFIG.paths['model_catalog']
 CATEGORY = 'Speech'
 
 
@@ -41,11 +42,12 @@ class Model:
                 'weights_size_bytes': sum(entry.get('size_bytes', 0) for entry in weights)}
 
 
-def load_models(root: Path = MODELS_ROOT) -> list[Model]:
+def load_models(root: Path | None = None) -> list[Model]:
     models = []
-    for manifest_path in sorted(root.glob('**/manifest.json')):
-        if 'Comfy' in manifest_path.relative_to(root).parts:
-            continue
+    roots = (root,) if root is not None else CONFIG.model_roots
+    manifests = {manifest.resolve() for directory in roots for manifest in directory.rglob('manifest.json')
+                 if 'Comfy' not in manifest.relative_to(directory).parts}
+    for manifest_path in sorted(manifests):
         payload = json.loads(manifest_path.read_text(encoding='utf-8-sig'))
         source = payload.get('source', '')
         family = payload.get('family') or ('whisper' if payload.get('format', '').startswith('CTranslate2') else None)
@@ -65,7 +67,7 @@ def load_models(root: Path = MODELS_ROOT) -> list[Model]:
     return models
 
 
-def select_model(value: str, family: str, root: Path = MODELS_ROOT) -> Model:
+def select_model(value: str, family: str, root: Path | None = None) -> Model:
     matches = [model for model in load_models(root) if model.family == family and value in (model.id, model.display_name)]
     if len(matches) == 1:
         return matches[0]

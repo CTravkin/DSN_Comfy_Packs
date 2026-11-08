@@ -34,9 +34,9 @@ class RequestSetup(io.ComfyNode):
         servers = load_config().servers
         options = [
             io.DynamicCombo.Option(server.name, [
-                io.Combo.Input('model', list(server.models), display_name='Модель',
+                io.Combo.Input('model', list(server.models), default=server.default_model, display_name='Модель',
                                tooltip='Модели, указанные для выбранного сервера в конфигурации'),
-                toggle('stop_after', 'Остановить после запроса',
+                toggle('stop_after', 'Остановить после запроса', server.stop_after,
                        tooltip='После запроса останавливается только сервер, запущенный этим пакетом'),
                 io.Float.Input('temperature', display_name='Температура', default=server.temperature,
                                min=0, max=2, step=0.01, advanced=True,
@@ -66,21 +66,25 @@ class RequestSetup(io.ComfyNode):
         if model is None:
             raise ValueError('Выбранная модель отсутствует в профиле сервера')
         return io.NodeOutput(Request(server, model, profile.get('temperature', server.temperature),
-                                     profile.get('max_tokens', server.max_tokens), profile.get('stop_after', False)))
+                                     profile.get('max_tokens', server.max_tokens), profile.get('stop_after', server.stop_after)))
 
 
 class Prompt(io.ComfyNode):
     @classmethod
     def define_schema(cls):
-        return io.Schema(node_id='DSNTextPrompt', display_name='Prompt', category='Text', inputs=[
-            io.DynamicCombo.Input('source', [
+        options = [
                 io.DynamicCombo.Option('Текст', [io.String.Input(
                     'text', display_name='Промпт', default='', multiline=True,
                     tooltip='Задание и требования к ответу модели')]),
                 io.DynamicCombo.Option('Файл', [io.String.Input(
                     'file', display_name='Файл промпта', default='',
                     tooltip='Полный путь к TXT или MD либо путь от корня рабочей папки')]),
-            ], display_name='Источник', tooltip='Способ задания промпта: текст в поле или содержимое файла'),
+        ]
+        if load_config().defaults.get('prompt', {}).get('source') == 'file':
+            options.reverse()
+        return io.Schema(node_id='DSNTextPrompt', display_name='Prompt', category='Text', inputs=[
+            io.DynamicCombo.Input('source', options, display_name='Источник',
+                                  tooltip='Способ задания промпта: текст в поле или содержимое файла'),
         ], outputs=[io.String.Output('prompt', display_name='Промпт')])
 
     @staticmethod
@@ -131,6 +135,8 @@ class TextContext(io.ComfyNode):
                 for index in range(1, count + 1)
             ]) for count, label in enumerate(FILE_COUNTS)
         ]
+        default_count = load_config().defaults.get('context', {}).get('file_count', 0)
+        counts.insert(0, counts.pop(default_count))
         return io.Schema(
             node_id='DSNTextContext', display_name='Text Context', category='Text',
             description='Объединяет исходный текст и содержимое выбранных файлов в материалы для Generate Text.',
@@ -160,15 +166,17 @@ class TextContext(io.ComfyNode):
 class ResultSetup(io.ComfyNode):
     @classmethod
     def define_schema(cls):
+        defaults = load_config().defaults.get('result', {})
+        export = defaults.get('export', {})
         return io.Schema(node_id='DSNTextResultSetup', display_name='Result Setup', category='Text', inputs=[
             io.String.Input('directory', display_name='Каталог результатов', default='', advanced=True,
                             tooltip='Полный путь или путь от корня рабочей папки; пустое поле означает Output Comfy'),
             io.String.Input('name', display_name='Имя результата', default='',
                             tooltip='Общее имя папки и файлов; при совпадении файлы добавляются в существующую папку'),
-            toggle('include_datetime', 'Дата и время в имени', True,
+            toggle('include_datetime', 'Дата и время в имени', defaults.get('include_datetime', True),
                    tooltip='Добавляет дату и время запуска к имени папки и файлов'),
-            toggle('txt', 'Сохранить TXT', True, tooltip='Текстовый файл в каталоге результатов'),
-            toggle('md', 'Сохранить MD', True, tooltip='Файл Markdown в каталоге результатов'),
+            toggle('txt', 'Сохранить TXT', export.get('txt', True), tooltip='Текстовый файл в каталоге результатов'),
+            toggle('md', 'Сохранить MD', export.get('md', True), tooltip='Файл Markdown в каталоге результатов'),
         ], outputs=[SaveOptions.Output('save', display_name='Настройки сохранения')])
 
     @classmethod

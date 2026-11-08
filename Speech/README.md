@@ -28,14 +28,16 @@ Windows x64. Для обработки доступны CPU и совмести�
 - Python 3.14 для окружений обработки. Для диаризации и голосовых отпечатков требуется FFmpeg со сборкой shared и каталогом DLL в `PATH`.
 - Для GPU в Whisper требуются cuBLAS для CUDA 12 и cuDNN 9. Для GPU в pyannote и SpeechBrain используется совместимая сборка PyTorch. [Faster Whisper](https://github.com/SYSTRAN/faster-whisper), [TorchCodec](https://github.com/meta-pytorch/torchcodec)
 
-`SPEECH_AI_ROOT` задает каталог данных пакета. По умолчанию используется `~/.dsn-comfy/speech`. Переменная, если задана, должна быть доступна процессу ComfyUI.
+Скопировать [шаблон](config.example.json) в `package-configs/speech-config.json` внутри пользовательского каталога экземпляра ComfyUI. Для другого расположения задать полный путь через `COMFY_SPEECH_CONFIG` в окружении процесса ComfyUI. При `root: null` рабочим корнем служит базовая папка экземпляра ComfyUI. Явный относительный `root` отсчитывается от папки конфига, остальные явные пути — от рабочего корня.
 
 | Путь относительно каталога данных | Назначение |
 | --- | --- |
 | `Apps/FasterWhisper/.venv`, `Apps/SpeakerAnalysis/.venv` | Окружения обработки |
-| `Models/` | Локальные комплекты моделей с `manifest.json` |
+| `speech/` внутри каталога моделей ComfyUI | Комплекты с `manifest.json`, если `paths.model_roots` равен `null`. В `model_roots` можно указать несколько своих каталогов |
 | `Data/Speakers/` | Подтвержденные эталоны голосов |
-| `Data/Comfy/`, `Cache/`, `Temp/` | Каталог моделей Comfy, кеши и временные файлы |
+| `Cache/`, `Temp/` | Кеши и временные файлы Speech. Карточки по умолчанию хранятся в `speech-model-catalog` рядом с конфигом |
+
+При пустых путях в `runtime` используются стандартные окружения и скрипты пакета. `paths.ffmpeg_bin: null` включает поиск FFmpeg, явный путь добавляется в начало `PATH` дочернего процесса. `defaults` задает начальные значения новых нод. Пустые модель, язык и устройство включают выбор совместимой модели, распознавание языка и автоматический выбор устройства соответственно.
 
 ### Поддерживаемые модели
 
@@ -63,11 +65,7 @@ File Setup передает исходный файл связанным нод�
 Подготовить два окружения. Пример для PowerShell с CPU сборкой PyTorch.
 
 ```powershell
-$speechRoot = if ($env:SPEECH_AI_ROOT) {
-    $env:SPEECH_AI_ROOT
-} else {
-    Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsn-comfy\speech'
-}
+$speechRoot = 'C:\ComfyUI' # заменить на рабочий корень экземпляра
 $whisper = Join-Path $speechRoot 'Apps\FasterWhisper\.venv'
 $analysis = Join-Path $speechRoot 'Apps\SpeakerAnalysis\.venv'
 py -3.14 -m venv $whisper
@@ -77,7 +75,7 @@ py -3.14 -m venv $analysis
 & "$analysis\Scripts\python.exe" -m pip install torchcodec==0.11.1 pyannote.audio==4.0.7 speechbrain==1.1.0
 ```
 
-Сохранить выбранные модели в отдельные каталоги внутри `Models/`. Подойдет полный снимок Hugging Face, полученный через `hf download <owner/repository> --revision <revision> --local-dir <каталог>`. В каждый каталог модели добавить `manifest.json`. Пример для Whisper Large V3.
+Сохранить выбранные модели в отдельные папки внутри `speech/` каталога моделей ComfyUI или в каталогах из `paths.model_roots`. Подойдет полный снимок Hugging Face, полученный через `hf download <owner/repository> --revision <revision> --local-dir <каталог>`. В каждый каталог модели добавить `manifest.json`. Пример для Whisper Large V3.
 
 ```json
 {
@@ -96,7 +94,7 @@ py -3.14 -m venv $analysis
 
 В [workflows/](workflows/) восемь готовых процессов. Каждый файл `.app.json` открывается как приложение с параметрами в боковой панели. Переключатель **Граф / Приложение** открывает граф того же процесса для просмотра и редактирования. Полный текст подсказки появляется при наведении на значок рядом с полем, а нажатие закрепляет ее.
 
-Поля исходных файлов, готовых результатов, отпечатков, карт имен и каталогов принимают полный путь или путь от рабочего корня `SPEECH_AI_ROOT`, например `Input/запись.wav`. Пустой каталог в File Setup использует Output текущего экземпляра Comfy.
+Поля исходных файлов, готовых результатов, отпечатков, карт имен и каталогов принимают полный путь или путь от рабочего корня, например `input/запись.wav`. Пустой каталог в File Setup использует Output текущего экземпляра ComfyUI.
 
 Перед запуском указать исходный файл и выбрать установленные модели, если они требуются. В стандартной **Расшифровке** включены TXT, JSON и SRT, VTT доступен отдельно. **Транскрипт по карте** использует готовую разметку и карту имен. **Эталоны голосов** и **Карта имен** доступны в расширенных входных данных соответствующих нод.
 

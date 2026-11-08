@@ -51,7 +51,7 @@ async def interruptible(coroutine, check_cancel):
 def start_process(server: Server) -> subprocess.Popen:
     flags = {'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {'start_new_session': True}
     try:
-        return subprocess.Popen(server.launch, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+        return subprocess.Popen(server.launch, cwd=server.cwd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                 stderr=subprocess.DEVNULL, **flags)
     except OSError:
         raise RuntimeError(f'Не удалось запустить сервер «{server.name}». Проверьте команду в конфиге') from None

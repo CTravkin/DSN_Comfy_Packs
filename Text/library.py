@@ -12,6 +12,25 @@ from .config import load_config
 CATEGORY = 'Text'
 TAGS = {'models', 'model_type:Text', 'text-catalog'}
 ENTRY_PATTERN = re.compile(r'text-[0-9a-f]{24}\.json')
+MANIFEST_FIELDS = ('source', 'revision', 'format', 'family')
+MANAGED_METADATA = {*MANIFEST_FIELDS, 'weights_size_bytes', 'url', 'modelspec.author', 'modelspec.architecture'}
+
+
+def model_details(path):
+    if path is None:
+        return {}
+    try:
+        manifest = json.loads(path.read_text(encoding='utf-8-sig'))
+        details = {key: value.strip() for key in MANIFEST_FIELDS
+                   if isinstance(value := manifest.get(key), str) and value.strip()}
+        weights = manifest.get('weight_files') or [manifest.get('weight_file')]
+        if isinstance(weights, list) and all(isinstance(item, dict) and type(item.get('size_bytes')) is int
+                                             and item['size_bytes'] > 0 for item in weights):
+            details['weights_size_bytes'] = sum(item['size_bytes'] for item in weights)
+        return details
+    except (OSError, ValueError, AttributeError) as error:
+        logging.warning('Text: не удалось прочитать манифест %s (%s)', path, type(error).__name__)
+        return {}
 
 
 def model_entries(config):
@@ -21,18 +40,34 @@ def model_entries(config):
         if profiles:
             digest = sha256(model_id.encode('utf-8')).hexdigest()[:24]
             entries.append({'id': model_id, 'name': name, 'profiles': profiles,
-                            'filename': f'text-{digest}.json'})
+                            'filename': f'text-{digest}.json',
+                            'details': model_details(config.manifests.get(model_id))})
     return entries
 
 
 def metadata(entry):
     profiles = ', '.join(entry['profiles'])
+    detail = entry.get('details', {})
+    summary = [('Сервер' if len(entry['profiles']) == 1 else 'Серверы') + f': {profiles}']
+    if detail.get('format'):
+        summary.append(detail['format'])
+    if detail.get('source'):
+        summary.append(detail['source'])
+    description = ' · '.join(summary)
+    source = detail.get('source', '')
+    link = ({'url': f'https://huggingface.co/{source}', 'modelspec.author': source.split('/')[0]}
+            if re.fullmatch(r'[\w.-]+/[\w.-]+', source, flags=re.ASCII) else {})
+    architecture = {'modelspec.architecture': detail['family']} if detail.get('family') else {}
     return {
         'filename': entry['filename'],
         'modelspec.title': entry['name'],
-        'description': f'Текстовая модель из конфигурации пакета Text. Профили: {profiles}.',
+        'description': description,
+        'modelspec.description': description,
         'model_id': entry['id'],
         'profiles': entry['profiles'],
+        **detail,
+        **link,
+        **architecture,
     }
 
 
@@ -86,6 +121,8 @@ def register_assets(config, entries):
             ).ref.id
             user_metadata = {}
             tags = set()
+        for key in MANAGED_METADATA:
+            user_metadata.pop(key, None)
         user_metadata.update(metadata(entry))
         update_asset_metadata(ref_id, name=entry['name'], tags=sorted(tags | TAGS), user_metadata=user_metadata)
         for duplicate in details[1:]:

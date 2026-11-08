@@ -1,0 +1,54 @@
+{
+  "root": null,
+  "paths": {
+    "model_roots": null,
+    "model_catalog": null,
+    "model_annotations": null,
+    "voiceprints": "Data/Speakers",
+    "huggingface_cache": "Cache/HuggingFace/Hub",
+    "speechbrain_cache": "Cache/SpeechBrain",
+    "temp": "Temp/Speech",
+    "ffmpeg_bin": null
+  },
+  "runtime": {
+    "timeout": 3600,
+    "offline": true,
+    "whisper": {
+      "python": null,
+      "runner": null
+    },
+    "speaker_analysis": {
+      "python": null,
+      "runners": {
+        "diarization": null,
+        "voiceprint": null,
+        "transcript": null
+      }
+    }
+  },
+  "defaults": {
+    "device": null,
+    "models": { "whisper": null, "diarization": null, "voiceprint": null },
+    "file_setup": { "include_datetime": true },
+    "whisper": {
+      "language": null,
+      "task": "transcribe",
+      "beam_size": 5,
+      "vad": true,
+      "compute_type": null,
+      "export": { "txt": false, "json": false, "srt": false, "vtt": false }
+    },
+    "diarization": {
+      "speakers": null,
+      "min_speakers": 0,
+      "max_speakers": 0,
+      "export": { "rttm": false }
+    },
+    "voiceprint": { "start": 0, "end": null },
+    "voiceprint_identity": { "threshold": 0.25, "minimum_margin": 0.05 },
+    "speaker_transcript": {
+      "max_gap": 1,
+      "export": { "txt": true, "json": true }
+    }
+  }
+}

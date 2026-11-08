@@ -103,7 +103,7 @@ class TextTests(unittest.TestCase):
 
     def test_library_groups_one_model_across_server_profiles(self):
         from Text.config import load_config
-        from Text.library import model_entries
+        from Text.library import metadata, model_entries
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'config.json'
@@ -118,3 +118,33 @@ class TextTests(unittest.TestCase):
             self.assertEqual([(item['id'], item['name'], item['profiles']) for item in entries], [
                 ('gemma', 'Gemma', {'local': 'local-id', 'other': 'other-id'}),
             ])
+            self.assertEqual(metadata(entries[0])['description'], 'Серверы: local, other')
+
+    def test_new_config_uses_comfy_root_for_manifest_and_launch(self):
+        from Text.config import load_config
+        from Text.library import metadata, model_entries
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp).resolve()
+            config_dir = base / 'external-user' / 'package-configs'
+            config_dir.mkdir(parents=True)
+            (base / 'manifest.json').write_text(
+                json.dumps({'source': 'owner/model', 'format': 'GGUF', 'revision': 'abc'}), encoding='utf-8')
+            path = config_dir / 'text-config.json'
+            path.write_text(json.dumps({
+                'root': None,
+                'models': {'local': {'name': 'Local model', 'manifest': 'manifest.json'}},
+                'servers': {'demo': {'url': 'http://127.0.0.1:8080/v1', 'models': {'local': 'api-id'},
+                                     'launch': {'executable': 'bin/server', 'cwd': None}}},
+                'defaults': {'request': {'temperature': 0.4, 'stop_after': True}},
+            }), encoding='utf-8')
+            with patch('Text.config.config_locations', return_value=(base, config_dir)):
+                config = load_config(path)
+            server = config.servers['demo']
+            self.assertEqual(server.cwd, base)
+            self.assertEqual(server.launch, (str(base / 'bin' / 'server'),))
+            self.assertEqual(server.temperature, 0.4)
+            self.assertTrue(server.stop_after)
+            card = metadata(model_entries(config)[0])
+            self.assertEqual(card['description'], 'Сервер: demo · GGUF · owner/model')
+            self.assertEqual(card['revision'], 'abc')
