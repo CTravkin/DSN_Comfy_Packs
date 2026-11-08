@@ -41,11 +41,9 @@ class TextTests(unittest.TestCase):
             self.assertEqual(resolve_path(root / 'work', str(root / 'note.md')), (root / 'note.md').resolve())
             self.assertEqual(collect_text(root, ['table.csv', str(root / 'note.md')], 'Транскрипт'),
                              'Транскрипт\n\n## table.csv\n\nимя,сумма\nтест,1\n\n## note.md\n\nЗаметка')
-            self.assertEqual(collect_text(root, 'table.csv\nnote.md', 'Транскрипт'),
-                             'Транскрипт\n\n## table.csv\n\nимя,сумма\nтест,1\n\n## note.md\n\nЗаметка')
             for name in ('..', '../outside.txt', 'unknown.pdf'):
                 with self.subTest(name=name), self.assertRaises(ValueError):
-                    collect_text(root, name, '')
+                    collect_text(root, [name], '')
 
     def test_export_modes_do_not_overwrite_and_keep_pair_names(self):
         from Text.files import ResultSettings, export_text

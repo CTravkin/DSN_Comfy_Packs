@@ -108,27 +108,6 @@ class Prompt(io.ComfyNode):
         return io.NodeOutput(prompt)
 
 
-class CollectText(io.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        return io.Schema(node_id='DSNTextCollect', display_name='Collect Text', category='Text', is_deprecated=True,
-                         description='Собирает материалы из текста и файлов по списку путей. Для новых графов используется Text Context.',
-                         inputs=[
-            io.String.Input('source', display_name='Исходный текст', optional=True, force_input=True,
-                            tooltip='Дополнительный текст из графа'),
-            io.String.Input('files', display_name='Файлы', default='', multiline=True,
-                            tooltip='Полные пути или пути от корня рабочей папки, по одному на строку'),
-        ], outputs=[io.String.Output('materials', display_name='Материалы')])
-
-    @classmethod
-    def fingerprint_inputs(cls, files='', **kwargs):
-        return digest(collect_text(load_config().root, files, ''))
-
-    @classmethod
-    def execute(cls, files='', source=''):
-        return io.NodeOutput(collect_text(load_config().root, files, source))
-
-
 class TextContext(io.ComfyNode):
     @classmethod
     def define_schema(cls):
@@ -222,4 +201,4 @@ class GenerateText(io.ComfyNode):
         return io.NodeOutput(text, finish, ui=presentation(text, finish, exports, view_key))
 
 
-NODES = [RequestSetup, Prompt, TextContext, ResultSetup, GenerateText, CollectText]
+NODES = [RequestSetup, Prompt, TextContext, ResultSetup, GenerateText]

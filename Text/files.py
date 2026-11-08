@@ -36,10 +36,9 @@ def read_text(root: Path, name: str, formats: set[str], *, prompts: Path | None 
         raise ValueError(f'Не удалось прочитать файл UTF-8: {entered.name}') from None
 
 
-def collect_text(root: Path, file_list: str | list[str], source: str) -> str:
+def collect_text(root: Path, file_list: list[str], source: str) -> str:
     parts = [source] if source.strip() else []
-    names = file_list.splitlines() if isinstance(file_list, str) else file_list
-    for name in names:
+    for name in file_list:
         if name.strip():
             text = read_text(root, name, MATERIAL_FORMATS)
             filename = Path(name.strip().strip('"')).name

@@ -15,7 +15,7 @@ const labels = {
 };
 const dynamicNodes = { DSNTextRequestSetup: "profile", DSNTextPrompt: "source", DSNTextContext: "files" };
 const resultFields = ["directory", "name", "include_datetime", "txt", "md"];
-const textNodes = new Set([...Object.keys(dynamicNodes), "DSNTextResultSetup", "DSNTextGenerate", "DSNTextCollect"]);
+const textNodes = new Set([...Object.keys(dynamicNodes), "DSNTextResultSetup", "DSNTextGenerate"]);
 const inputSpecs = new Map();
 const resultType = "DSNTextGenerate";
 function migrateResultFields(graph) {
