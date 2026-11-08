@@ -159,6 +159,9 @@ class TextTests(unittest.TestCase):
             register_assets(config, [])
             self.assertEqual(card_ids(), [])
             self.assertFalse(path.exists())
+            with patch('app.assets.services.update_asset_metadata', side_effect=RuntimeError('write failed')):
+                with self.assertRaisesRegex(RuntimeError, 'write failed'):
+                    register_assets(config, entries)
             register_assets(config, entries)
             restored_id, = card_ids()
             restored = get_asset_detail(restored_id)

@@ -11,7 +11,8 @@ from .config import load_config
 
 
 CATEGORY = 'Text'
-TAGS = {'models', 'model_type:Text', 'text-catalog'}
+CATALOG_TAG = 'text-catalog'
+TAGS = {'models', 'model_type:Text', CATALOG_TAG}
 ENTRY_PATTERN = re.compile(r'text-[0-9a-f]{24}\.json')
 MANIFEST_FIELDS = ('source', 'revision', 'format', 'family')
 SYSTEM_TAGS = TAGS | {'uploaded', 'missing', 'preview'}
@@ -149,25 +150,26 @@ def register_assets(config, entries):
                 raise ValueError('Файл каталога Text уже используется')
         desired.add(path)
 
-        details = sorted(existing.get(path, ()), key=lambda detail: 'text-catalog' not in detail.tags)
+        details = sorted(existing.get(path, ()), key=lambda detail: CATALOG_TAG not in detail.tags)
         saved = annotations.pop(path.name, None)
         # A current managed card reflects manual edits, including explicit removals.
-        user = merge_annotations(details, saved if not details or 'text-catalog' not in details[0].tags else None)
+        user = merge_annotations(details, saved if not details or CATALOG_TAG not in details[0].tags else None)
         if details:
             ref_id = details[0].ref.id
         else:
+            # Mark the card managed only in the same update that applies its annotations.
             ref_id = register_file_in_place(
-                str(path), entry['name'], sorted(TAGS), 'application/json', content_written=False,
+                str(path), entry['name'], sorted(TAGS - {CATALOG_TAG}), 'application/json', content_written=False,
             ).ref.id
         update_asset_metadata(ref_id, name=entry['name'], tags=sorted(set(user['tags']) | TAGS),
                               user_metadata={**user['metadata'], **metadata(entry)})
         for duplicate in details[1:]:
-            if 'text-catalog' in duplicate.tags:
+            if CATALOG_TAG in duplicate.tags:
                 delete_asset_reference(duplicate.ref.id)
 
     retired = []
     for path, details in existing.items():
-        managed = [detail for detail in details if 'text-catalog' in detail.tags]
+        managed = [detail for detail in details if CATALOG_TAG in detail.tags]
         if path not in desired and managed:
             user = merge_annotations(details)
             if user['tags'] or user['metadata']:
