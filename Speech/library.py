@@ -70,7 +70,7 @@ def register_assets():
         models = catalog.load_models()
         existing = owned_references()
         snapshots = [(reference_id, path, get_asset_detail(reference_id)) for reference_id, path in existing]
-        annotations_path = catalog.CATALOG_ROOT.parent / 'model-annotations.json'
+        annotations_path = catalog.CONFIG.paths['model_annotations']
         annotations = json.loads(annotations_path.read_text(encoding='utf-8')) if annotations_path.exists() else {'schema_version': 1, 'models': {}}
         if annotations.get('schema_version') != 1 or not isinstance(annotations.get('models'), dict):
             raise ValueError('Неизвестный формат аннотаций моделей')
@@ -121,6 +121,7 @@ def register_assets():
             registered[key] = reference_id
         # Persist annotations before removing any old card, also when its model
         # is temporarily absent. The key is HF identity/revision, never a DB UUID.
+        annotations_path.parent.mkdir(parents=True, exist_ok=True)
         temporary = annotations_path.with_suffix('.tmp')
         temporary.write_text(json.dumps(annotations, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         temporary.replace(annotations_path)

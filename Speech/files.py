@@ -15,8 +15,17 @@ def sha256(path: Path) -> str:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def read_path(value: str) -> Path:
-    return Path(value.strip().strip('"')).expanduser().resolve()
+def read_path(value: str, root: Path = AI_ROOT) -> Path:
+    entered = Path(value.strip().strip('"')).expanduser()
+    if entered.is_absolute():
+        return entered.resolve()
+    if entered.anchor:
+        raise ValueError('Укажите полный путь или путь от корня рабочей папки')
+    root = root.resolve()
+    path = (root / entered).resolve()
+    if not path.is_relative_to(root):
+        raise ValueError('Для пути за пределами рабочей папки укажите полный путь')
+    return path
 
 
 def safe_name(value: str) -> str:
@@ -57,13 +66,14 @@ class Files:
 
 
 def setup_files(media_path: str, output_directory: str = '',
-                name: str = '', include_datetime: bool = True, *, now: datetime | None = None) -> Files:
-    source = read_path(media_path)
+                name: str = '', include_datetime: bool = True, *, now: datetime | None = None,
+                root: Path = AI_ROOT) -> Files:
+    source = read_path(media_path, root)
     if not source.is_file():
         raise FileNotFoundError(f'Файл записи не найден: {source}')
     if not output_directory.strip():
-        output_directory = str(AI_ROOT / 'Output')
-    output = read_path(output_directory)
+        output_directory = str(root / 'Output')
+    output = read_path(output_directory, root)
     user_name = safe_name(name) if name.strip() else ''
     stamp = (now or datetime.now().astimezone()).strftime('%Y-%m-%d %H-%M')
     stem = safe_name(' '.join(x for x in (stamp if include_datetime else '', user_name) if x) or source.stem)

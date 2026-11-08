@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
-from .catalog import AI_ROOT, Model
+from .catalog import AI_ROOT, CONFIG, Model
 from .files import Files, publish, read_path, sha256
 
 RUNNERS = Path(__file__).resolve().with_name('runners')
@@ -23,18 +23,23 @@ RUNNER_SCRIPTS = {
 
 
 def run_cli(python: Path, cli: Path, arguments: list[str], *, ai_root: Path = AI_ROOT,
-            timeout: float = 3600, cancel_check: Callable | None = None) -> dict:
+            timeout: float | None = None, cancel_check: Callable | None = None) -> dict:
     for path in (python, cli):
         if not path.is_file():
             raise FileNotFoundError(f'Локальный компонент не найден: {path}')
     environment = os.environ.copy()
     site = python.parent.parent / 'Lib' / 'site-packages'
     libraries = [site / 'nvidia' / part / 'bin' for part in ('cublas', 'cudnn')]
-    temp = ai_root / 'Temp' / 'Speech'
+    paths = CONFIG.paths if ai_root == AI_ROOT else {}
+    temp = paths.get('temp', ai_root / 'Temp' / 'Speech')
     temp.mkdir(parents=True, exist_ok=True)
-    environment.update(HF_HUB_OFFLINE='1', TRANSFORMERS_OFFLINE='1', HF_HUB_DISABLE_TELEMETRY='1',
+    if ffmpeg_bin := paths.get('ffmpeg_bin'):
+        libraries.insert(0, ffmpeg_bin)
+    offline = '1' if CONFIG.runtime['offline'] else '0'
+    timeout = CONFIG.runtime['timeout'] if timeout is None else timeout
+    environment.update(HF_HUB_OFFLINE=offline, TRANSFORMERS_OFFLINE=offline, HF_HUB_DISABLE_TELEMETRY='1',
                        PYTHONUTF8='1', PYTHONDONTWRITEBYTECODE='1',
-                       HF_HUB_CACHE=str(ai_root / 'Cache' / 'HuggingFace' / 'Hub'),
+                       HF_HUB_CACHE=str(paths.get('huggingface_cache', ai_root / 'Cache' / 'HuggingFace' / 'Hub')),
                        TEMP=str(temp), TMP=str(temp),
                        PATH=os.pathsep.join([*(str(p) for p in libraries), environment.get('PATH', '')]))
     process = subprocess.Popen([str(python), '-B', str(cli), *arguments], shell=False,
@@ -64,16 +69,30 @@ def run_cli(python: Path, cli: Path, arguments: list[str], *, ai_root: Path = AI
     return json.loads(stdout)
 
 
+def runner(tool: str) -> Path:
+    if tool == 'Whisper':
+        override = CONFIG.runtime['whisper']['runner']
+    else:
+        key = {'SpeakerDiarization': 'diarization', 'Voiceprint': 'voiceprint', 'SpeakerTranscript': 'transcript'}[tool]
+        override = CONFIG.runtime['speaker_analysis']['runners'][key]
+    return CONFIG.resolve(override) if override else RUNNER_SCRIPTS[tool]
+
+
 def invoke(tool: str, arguments: list[str], *, ai_root: Path = AI_ROOT, cancel_check=None):
-    environment = 'FasterWhisper' if tool == 'Whisper' else 'SpeakerAnalysis'
+    whisper = tool == 'Whisper'
+    environment = 'FasterWhisper' if whisper else 'SpeakerAnalysis'
     venv = ai_root / 'Apps' / environment / '.venv'
     python = venv / 'Scripts' / 'python.exe' if os.name == 'nt' else venv / 'bin' / 'python'
-    return run_cli(python, RUNNER_SCRIPTS[tool], arguments, ai_root=ai_root, cancel_check=cancel_check)
+    override = CONFIG.runtime['whisper' if whisper else 'speaker_analysis']['python']
+    if override and ai_root == AI_ROOT:
+        python = CONFIG.resolve(override)
+    return run_cli(python, runner(tool), arguments, ai_root=ai_root, cancel_check=cancel_check)
 
 
 def voiceprint_cache(model: Model, ai_root: Path) -> Path:
     key = hashlib.sha256(f'{model.id}|{model.revision}|{model.path.resolve()}'.encode()).hexdigest()[:20]
-    return ai_root / 'Cache' / 'SpeechBrain' / key
+    cache = CONFIG.paths['speechbrain_cache'] if ai_root == AI_ROOT else ai_root / 'Cache' / 'SpeechBrain'
+    return cache / key
 
 
 def read_result(path: Path, context: Files | None = None, *, model: Model | None = None) -> dict:
@@ -87,10 +106,10 @@ def read_result(path: Path, context: Files | None = None, *, model: Model | None
     return data
 
 
-def reuse(existing_json: str, context: Files, model: Model, stage: Path) -> Path | None:
+def reuse(existing_json: str, context: Files, model: Model, stage: Path, *, root: Path = AI_ROOT) -> Path | None:
     if not existing_json.strip():
         return None
-    source = read_path(existing_json)
+    source = read_path(existing_json, root)
     read_result(source, context, model=model)
     target = stage / source.name
     shutil.copyfile(source, target)
@@ -103,7 +122,7 @@ def whisper(context: Files, model: Model, *, language='auto', task='transcribe',
     if task not in model.manifest.get('tasks', ['transcribe']):
         raise ValueError('Выбранная модель не поддерживает эту задачу; список задач задан в manifest')
     stage = context.stage('recognition')
-    result_path = reuse(existing_json, context, model, stage)
+    result_path = reuse(existing_json, context, model, stage, root=ai_root)
     if result_path:
         data = read_result(result_path, context, model=model)
         options = data.get('recognition_options', {})
@@ -114,7 +133,7 @@ def whisper(context: Files, model: Model, *, language='auto', task='transcribe',
             raise ValueError('Готовый результат не соответствует настройкам распознавания')
         # Render requested exports through the canonical formatter, without another inference.
         import importlib.util
-        spec = importlib.util.spec_from_file_location('_speech_whisper_formats', WHISPER_RUNNER)
+        spec = importlib.util.spec_from_file_location('_speech_whisper_formats', runner('Whisper'))
         formatter = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(formatter)
         formats = ['txt'] if save_text else []
@@ -127,7 +146,8 @@ def whisper(context: Files, model: Model, *, language='auto', task='transcribe',
         formats = ['json'] + (['txt'] if save_text else []) + (['srt'] if srt else []) + (['vtt'] if vtt else [])
         arguments = ['--input', str(context.source), '--output-dir', str(stage), '--model', str(model.path),
                      '--formats', ','.join(formats), '--device', device,
-                     '--compute-type', 'int8_float16' if device == 'cuda' else 'int8' if device == 'cpu' else 'auto',
+                     '--compute-type', CONFIG.defaults['whisper']['compute_type'] or
+                     {'cuda': 'int8_float16', 'cpu': 'int8'}.get(device, 'auto'),
                      '--task', task, '--beam-size', str(beam_size), '--word-timestamps',
                      '--vad-filter' if vad else '--no-vad-filter']
         if language != 'auto':
@@ -148,7 +168,7 @@ def whisper(context: Files, model: Model, *, language='auto', task='transcribe',
 def diarize(context: Files, model: Model, *, device='auto', speakers=0, min_speakers=0,
             max_speakers=0, rttm=False, existing_json='', ai_root=AI_ROOT, cancel_check=None):
     stage = context.stage('diarization')
-    result_path = reuse(existing_json, context, model, stage)
+    result_path = reuse(existing_json, context, model, stage, root=ai_root)
     parameters = {key: value for key, value in [('num_speakers', speakers), ('min_speakers', min_speakers), ('max_speakers', max_speakers)] if value}
     if result_path:
         data = read_result(result_path, context, model=model)
@@ -194,7 +214,7 @@ def extract(context: Files, model: Model, *, start=0.0, end=0.0, device='auto', 
 def compare(context: Files, left: str, right: str, *, ai_root=AI_ROOT, cancel_check=None):
     stage = context.stage('comparison')
     result = stage / 'comparison.json'
-    invoke('Voiceprint', ['compare', '--left', str(read_path(left)), '--right', str(read_path(right)),
+    invoke('Voiceprint', ['compare', '--left', str(read_path(left, ai_root)), '--right', str(read_path(right, ai_root)),
                          '--output-json', str(result)], ai_root=ai_root, cancel_check=cancel_check)
     data = read_result(result)
     return str(publish(context, result, '.comparison.json')), float(data['cosine_similarity'])
@@ -202,11 +222,14 @@ def compare(context: Files, left: str, right: str, *, ai_root=AI_ROOT, cancel_ch
 
 def identify(context: Files, model: Model, diarization_json: str, reference_root: str, *, device='auto',
              threshold=0.25, minimum_margin=0.05, ai_root=AI_ROOT, cancel_check=None):
-    read_result(read_path(diarization_json), context)
-    references = read_path(reference_root) if reference_root.strip() else ai_root / 'Data' / 'Speakers'
+    diarization = read_path(diarization_json, ai_root)
+    read_result(diarization, context)
+    references = CONFIG.paths['voiceprints'] if ai_root == AI_ROOT else ai_root / 'Data' / 'Speakers'
+    if reference_root.strip():
+        references = read_path(reference_root, ai_root)
     stage = context.stage('identification')
     result = stage / 'identification.json'
-    invoke('Voiceprint', ['identify', '--input', str(context.source), '--diarization-json', str(read_path(diarization_json)),
+    invoke('Voiceprint', ['identify', '--input', str(context.source), '--diarization-json', str(diarization),
                          '--reference-root', str(references), '--output-json', str(result),
                          '--model', str(model.path), '--device', device, '--threshold', str(threshold),
                          '--minimum-margin', str(minimum_margin),
@@ -217,15 +240,16 @@ def identify(context: Files, model: Model, diarization_json: str, reference_root
 
 def transcript(context: Files, recognition_json: str, diarization_json: str, *, speaker_map='', confirmed=False,
                save_json=True, save_text=True, max_gap=1.0, ai_root=AI_ROOT, cancel_check=None):
-    for path in (recognition_json, diarization_json):
-        read_result(read_path(path), context)
+    recognition, diarization = (read_path(path, ai_root) for path in (recognition_json, diarization_json))
+    for path in (recognition, diarization):
+        read_result(path, context)
     stage = context.stage('transcript')
     result = stage / 'transcript.json'
     text_file = stage / 'transcript.txt'
-    arguments = ['--transcript-json', str(read_path(recognition_json)), '--diarization-json', str(read_path(diarization_json)),
+    arguments = ['--transcript-json', str(recognition), '--diarization-json', str(diarization),
                  '--output-json', str(result), '--output-txt', str(text_file), '--max-gap', str(max_gap)]
     if speaker_map.strip():
-        arguments += ['--speaker-map-json', str(read_path(speaker_map))]
+        arguments += ['--speaker-map-json', str(read_path(speaker_map, ai_root))]
     if confirmed:
         arguments += ['--speaker-map-confirmed']
     invoke('SpeakerTranscript', arguments, ai_root=ai_root, cancel_check=cancel_check)

@@ -1,0 +1,453 @@
+{
+  "id": "5fc7f814-16f0-4bee-990c-470ba33e7df6",
+  "revision": 0,
+  "last_node_id": 5,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "DSNTextRequestSetup",
+      "pos": [
+        210,
+        140
+      ],
+      "size": [
+        380,
+        230
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "profile",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "label": "Сервер",
+          "localized_name": "Сервер",
+          "widget": {
+            "name": "profile"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Настройки запроса",
+          "type": "DSN_TEXT_REQUEST",
+          "label": "Настройки запроса",
+          "localized_name": "Настройки запроса",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DSNTextRequestSetup"
+      }
+    },
+    {
+      "id": 2,
+      "type": "DSNTextPrompt",
+      "pos": [
+        710,
+        240
+      ],
+      "size": [
+        380,
+        250
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "label": "Источник",
+          "localized_name": "Источник",
+          "widget": {
+            "name": "source"
+          },
+          "link": null
+        },
+        {
+          "name": "source.text",
+          "type": "STRING",
+          "label": "Промпт",
+          "localized_name": "Промпт",
+          "widget": {
+            "name": "source.text"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Промпт",
+          "type": "STRING",
+          "label": "Промпт",
+          "localized_name": "Промпт",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DSNTextPrompt"
+      },
+      "widgets_values": [
+        "Текст",
+        ""
+      ]
+    },
+    {
+      "id": 3,
+      "type": "DSNTextContext",
+      "pos": [
+        710,
+        640
+      ],
+      "size": [
+        380,
+        170
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "STRING",
+          "label": "Исходный текст",
+          "localized_name": "Исходный текст",
+          "link": null
+        },
+        {
+          "name": "files",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "label": "Количество файлов",
+          "localized_name": "Количество файлов",
+          "widget": {
+            "name": "files"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Материалы",
+          "type": "STRING",
+          "label": "Материалы",
+          "localized_name": "Материалы",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DSNTextContext"
+      },
+      "widgets_values": [
+        "Без файлов"
+      ],
+      "title": "Text Context",
+      "widgets_values_named": {
+        "files": "Без файлов"
+      }
+    },
+    {
+      "id": 4,
+      "type": "DSNTextResultSetup",
+      "pos": [
+        210,
+        500
+      ],
+      "size": [
+        380,
+        270
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "directory",
+          "type": "STRING",
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "widget": {
+            "name": "directory"
+          },
+          "link": null
+        },
+        {
+          "name": "name",
+          "type": "STRING",
+          "label": "Имя результата",
+          "localized_name": "Имя результата",
+          "widget": {
+            "name": "name"
+          },
+          "link": null
+        },
+        {
+          "name": "include_datetime",
+          "type": "BOOLEAN",
+          "label": "Дата и время в имени",
+          "localized_name": "Дата и время в имени",
+          "widget": {
+            "name": "include_datetime"
+          },
+          "link": null
+        },
+        {
+          "name": "txt",
+          "type": "BOOLEAN",
+          "label": "Сохранить TXT",
+          "localized_name": "Сохранить TXT",
+          "widget": {
+            "name": "txt"
+          },
+          "link": null
+        },
+        {
+          "name": "md",
+          "type": "BOOLEAN",
+          "label": "Сохранить MD",
+          "localized_name": "Сохранить MD",
+          "widget": {
+            "name": "md"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Настройки сохранения",
+          "type": "DSN_TEXT_SAVE",
+          "label": "Настройки сохранения",
+          "localized_name": "Настройки сохранения",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DSNTextResultSetup"
+      },
+      "widgets_values": [
+        "",
+        "",
+        true,
+        true,
+        true
+      ],
+      "widgets_values_named": {
+        "directory": "",
+        "name": "",
+        "include_datetime": true,
+        "txt": true,
+        "md": true
+      }
+    },
+    {
+      "id": 5,
+      "type": "DSNTextGenerate",
+      "pos": [
+        1210,
+        140
+      ],
+      "size": [
+        380,
+        450
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "request",
+          "type": "DSN_TEXT_REQUEST",
+          "label": "Настройки запроса",
+          "localized_name": "Настройки запроса",
+          "link": 1
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "label": "Промпт",
+          "localized_name": "Промпт",
+          "link": 2
+        },
+        {
+          "name": "materials",
+          "type": "STRING",
+          "label": "Материалы",
+          "localized_name": "Материалы",
+          "link": 3
+        },
+        {
+          "name": "save",
+          "type": "DSN_TEXT_SAVE",
+          "label": "Настройки сохранения",
+          "localized_name": "Настройки сохранения",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Текст",
+          "type": "STRING",
+          "label": "Текст",
+          "localized_name": "Текст",
+          "links": null
+        },
+        {
+          "name": "Причина завершения",
+          "type": "STRING",
+          "label": "Причина завершения",
+          "localized_name": "Причина завершения",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DSNTextGenerate"
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      5,
+      0,
+      "DSN_TEXT_REQUEST"
+    ],
+    [
+      2,
+      2,
+      0,
+      5,
+      1,
+      "STRING"
+    ],
+    [
+      3,
+      3,
+      0,
+      5,
+      2,
+      "STRING"
+    ],
+    [
+      4,
+      4,
+      0,
+      5,
+      3,
+      "DSN_TEXT_SAVE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        280,
+        16
+      ]
+    },
+    "linearMode": true,
+    "linearData": {
+      "inputs": [
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:1:profile",
+          "profile"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:1:profile.model",
+          "profile.model"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:1:profile.stop_after",
+          "profile.stop_after"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:2:source",
+          "source"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:2:source.text",
+          "source.text"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:2:source.file",
+          "source.file"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files",
+          "files"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_1",
+          "files.file_1"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_2",
+          "files.file_2"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_3",
+          "files.file_3"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_4",
+          "files.file_4"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_5",
+          "files.file_5"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_6",
+          "files.file_6"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_7",
+          "files.file_7"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files.file_8",
+          "files.file_8"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:name",
+          "name"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:include_datetime",
+          "include_datetime"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:txt",
+          "txt"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:md",
+          "md"
+        ]
+      ],
+      "outputs": [
+        5
+      ]
+    }
+  },
+  "version": 0.4
+}

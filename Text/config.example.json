@@ -1,0 +1,43 @@
+{
+  "root": null,
+  "paths": {
+    "prompts": "Prompts",
+    "model_catalog": null
+  },
+  "models": {
+    "example": {
+      "name": "Пример модели",
+      "manifest": null
+    }
+  },
+  "servers": {
+    "local": {
+      "name": "Локальный сервер",
+      "url": "http://127.0.0.1:8080/v1",
+      "api_key_env": null,
+      "models": {
+        "example": "model-id-from-api"
+      },
+      "default_model": null,
+      "launch": null
+    }
+  },
+  "defaults": {
+    "connection": {
+      "server": null,
+      "timeout": 600,
+      "startup_timeout": 30
+    },
+    "request": {
+      "temperature": 0.8,
+      "max_tokens": 8000,
+      "stop_after": false
+    },
+    "prompt": { "source": "text" },
+    "context": { "file_count": 0 },
+    "result": {
+      "include_datetime": true,
+      "export": { "txt": true, "md": true }
+    }
+  }
+}
