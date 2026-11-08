@@ -24,7 +24,7 @@ Windows x64. Для обработки доступны CPU и совмести�
 
 ## Требования
 
-- ComfyUI с API нод V3. Порядок полей на полотне рассчитан на Nodes 2.0, Библиотека моделей использует систему ассетов ComfyUI.
+- ComfyUI с API нод V3. Порядок полей на полотне рассчитан на Nodes 2.0. Для карточек моделей нужна система ассетов ComfyUI (`--enable-assets`); ноды работают и без карточек.
 - Python 3.14 для окружений обработки. Для диаризации и голосовых отпечатков требуется FFmpeg со сборкой shared и каталогом DLL в `PATH`.
 - Для GPU в Whisper требуются cuBLAS для CUDA 12 и cuDNN 9. Для GPU в pyannote и SpeechBrain используется совместимая сборка PyTorch. [Faster Whisper](https://github.com/SYSTRAN/faster-whisper), [TorchCodec](https://github.com/meta-pytorch/torchcodec)
 

@@ -118,6 +118,62 @@ class TextTests(unittest.TestCase):
             ])
             self.assertEqual(metadata(entries[0])['description'], 'Серверы: local, other')
 
+    def test_catalog_preserves_manual_annotations_when_a_model_returns(self):
+        from app.assets import mode
+        from app.assets.database.models import Asset
+        from app.assets.services import get_asset_detail, register_file_in_place, update_asset_metadata
+        from app.database import db
+        from sqlalchemy import select
+        from Text.config import Config, Server
+        from Text.library import TAGS, model_entries, register_assets
+
+        def card_ids():
+            with db.create_session() as session:
+                return list(session.scalars(select(Asset.id)))
+
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.object(db, 'Session'),
+            patch.object(db, 'WriteSession'),
+            patch.object(db.args, 'database_url', 'sqlite:///:memory:'),
+            patch.object(mode, '_args', db.args),
+        ):
+            db.init_db()
+            with db.create_session() as session:
+                self.addCleanup(session.get_bind().dispose)
+            root = Path(tmp)
+            server = Server('Local', 'http://127.0.0.1:9931/v1', {'Gemma': 'gemma'})
+            config = Config(root, root, {'local': server}, {'gemma': 'Gemma'}, root / 'catalog')
+            entries = model_entries(config)
+            register_assets(config, entries)
+            first, = card_ids()
+            update_asset_metadata(first, tags=[*TAGS, 'manual-one'],
+                                  user_metadata={'note': 'first', 'description': 'old'})
+            path = config.catalog / entries[0]['filename']
+            duplicate = register_file_in_place(str(path), 'Duplicate', sorted(TAGS), content_written=False)
+            update_asset_metadata(duplicate.ref.id, tags=[*TAGS, 'manual-two'],
+                                  user_metadata={'note': 'second', 'rating': 5})
+
+            register_assets(config, entries)
+            self.assertEqual(len(card_ids()), 1)
+            register_assets(config, [])
+            self.assertEqual(card_ids(), [])
+            self.assertFalse(path.exists())
+            register_assets(config, entries)
+            restored_id, = card_ids()
+            restored = get_asset_detail(restored_id)
+            self.assertTrue({'manual-one', 'manual-two'}.issubset(restored.tags))
+            self.assertEqual(set(restored.ref.user_metadata['_text_catalog_conflicts']['note']), {'first', 'second'})
+            self.assertEqual(restored.ref.user_metadata['rating'], 5)
+            self.assertEqual(restored.ref.user_metadata['description'], 'Сервер: Local')
+
+            update_asset_metadata(restored_id, tags=sorted(TAGS), user_metadata={})
+            register_assets(config, [])
+            register_assets(config, entries)
+            cleared = get_asset_detail(card_ids()[0])
+            self.assertFalse({'manual-one', 'manual-two'}.intersection(cleared.tags))
+            self.assertNotIn('note', cleared.ref.user_metadata)
+
     def test_new_config_uses_comfy_root_for_manifest_and_launch(self):
         from Text.config import load_config
         from Text.library import metadata, model_entries
