@@ -49,6 +49,7 @@ class RequestSetup(io.ComfyNode):
         if not options:
             options = [io.DynamicCombo.Option(NO_SERVER, [io.Combo.Input('model', [NO_MODEL], display_name='Модель')])]
         return io.Schema(node_id='DSNTextRequestSetup', display_name='Request Setup', category='Text',
+                         description='Задает сервер, модель и параметры запроса для Generate Text.',
                          inputs=[io.DynamicCombo.Input('profile', options, display_name='Сервер',
                                                        tooltip='Профиль подключения к серверу из конфигурации пакета Text')],
                          outputs=[RequestOptions.Output('request', display_name='Настройки запроса')])
@@ -82,7 +83,8 @@ class Prompt(io.ComfyNode):
         ]
         if load_config().defaults.get('prompt', {}).get('source') == 'file':
             options.reverse()
-        return io.Schema(node_id='DSNTextPrompt', display_name='Prompt', category='Text', inputs=[
+        return io.Schema(node_id='DSNTextPrompt', display_name='Prompt', category='Text',
+                         description='Берет промпт из поля или файла TXT/MD и передает его в Generate Text.', inputs=[
             io.DynamicCombo.Input('source', options, display_name='Источник',
                                   tooltip='Способ задания промпта: текст в поле или содержимое файла'),
         ], outputs=[io.String.Output('prompt', display_name='Промпт')])
@@ -109,7 +111,9 @@ class Prompt(io.ComfyNode):
 class CollectText(io.ComfyNode):
     @classmethod
     def define_schema(cls):
-        return io.Schema(node_id='DSNTextCollect', display_name='Collect Text', category='Text', is_deprecated=True, inputs=[
+        return io.Schema(node_id='DSNTextCollect', display_name='Collect Text', category='Text', is_deprecated=True,
+                         description='Собирает материалы из текста и файлов по списку путей. Для новых графов используется Text Context.',
+                         inputs=[
             io.String.Input('source', display_name='Исходный текст', optional=True, force_input=True,
                             tooltip='Дополнительный текст из графа'),
             io.String.Input('files', display_name='Файлы', default='', multiline=True,
@@ -139,7 +143,7 @@ class TextContext(io.ComfyNode):
         counts.insert(0, counts.pop(default_count))
         return io.Schema(
             node_id='DSNTextContext', display_name='Text Context', category='Text',
-            description='Объединяет исходный текст и содержимое выбранных файлов в материалы для Generate Text.',
+            description='Собирает исходный текст и содержимое до восьми файлов в материалы для Generate Text.',
             inputs=[
                 io.String.Input('source', display_name='Исходный текст', optional=True, force_input=True,
                                 tooltip='Текст из графа, который передается перед содержимым файлов'),
@@ -168,7 +172,8 @@ class ResultSetup(io.ComfyNode):
     def define_schema(cls):
         defaults = load_config().defaults.get('result', {})
         export = defaults.get('export', {})
-        return io.Schema(node_id='DSNTextResultSetup', display_name='Result Setup', category='Text', inputs=[
+        return io.Schema(node_id='DSNTextResultSetup', display_name='Result Setup', category='Text',
+                         description='Задает папку, имя и форматы сохранения ответа Generate Text.', inputs=[
             io.String.Input('directory', display_name='Каталог результатов', default='', advanced=True,
                             tooltip='Полный путь или путь от корня рабочей папки; пустое поле означает Output Comfy'),
             io.String.Input('name', display_name='Имя результата', default='',
@@ -190,6 +195,8 @@ class GenerateText(io.ComfyNode):
     @classmethod
     def define_schema(cls):
         return io.Schema(node_id='DSNTextGenerate', display_name='Generate Text', category='Text', is_output_node=True,
+                         description=('Передает выбранной модели промпт и материалы, возвращает текст ответа и причину завершения. '
+                                      'При включенном экспорте сохраняет ответ в файл.'),
                          inputs=[
                              RequestOptions.Input('request', display_name='Настройки запроса'),
                              io.String.Input('prompt', display_name='Промпт', force_input=True),
