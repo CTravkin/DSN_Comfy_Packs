@@ -1,0 +1,580 @@
+{
+  "id": "5fc7f814-16f0-4bee-990c-470ba33e7df6",
+  "revision": 0,
+  "last_node_id": 5,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "DSNTextRequestSetup",
+      "pos": [
+        260,
+        125
+      ],
+      "size": [
+        365,
+        180
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "profile",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "label": "Сервер",
+          "localized_name": "Сервер",
+          "widget": {
+            "name": "profile"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Настройки запроса",
+          "type": "DSN_TEXT_REQUEST",
+          "label": "Настройки запроса",
+          "localized_name": "Настройки запроса",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DSNTextRequestSetup"
+      }
+    },
+    {
+      "id": 2,
+      "type": "DSNTextPrompt",
+      "pos": [
+        260,
+        365
+      ],
+      "size": [
+        365,
+        215
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "label": "Источник",
+          "localized_name": "Источник",
+          "widget": {
+            "name": "source"
+          },
+          "link": null
+        },
+        {
+          "name": "source.text",
+          "type": "STRING",
+          "label": "Промпт",
+          "localized_name": "Промпт",
+          "widget": {
+            "name": "source.text"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Промпт",
+          "type": "STRING",
+          "label": "Промпт",
+          "localized_name": "Промпт",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DSNTextPrompt"
+      },
+      "widgets_values": [
+        "Текст",
+        ""
+      ]
+    },
+    {
+      "id": 3,
+      "type": "fe86fac1-a306-4f6b-9e28-b8dd47d8f6b0",
+      "pos": [
+        260,
+        595
+      ],
+      "size": [
+        370,
+        165
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "STRING",
+          "label": "Исходный текст",
+          "localized_name": "Исходный текст",
+          "link": null
+        },
+        {
+          "name": "files",
+          "type": "STRING",
+          "label": "Файлы",
+          "localized_name": "Файлы",
+          "widget": {
+            "name": "files"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Материалы",
+          "type": "STRING",
+          "label": "Материалы",
+          "localized_name": "Материалы",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "fe86fac1-a306-4f6b-9e28-b8dd47d8f6b0",
+        "proxyWidgets": [
+          [
+            "-1",
+            "files"
+          ]
+        ]
+      },
+      "widgets_values": [
+        ""
+      ],
+      "title": "Text Context"
+    },
+    {
+      "id": 4,
+      "type": "DSNTextResultSetup",
+      "pos": [
+        680,
+        550
+      ],
+      "size": [
+        360,
+        215
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "txt",
+          "type": "BOOLEAN",
+          "label": "Сохранить TXT",
+          "localized_name": "Сохранить TXT",
+          "widget": {
+            "name": "txt"
+          },
+          "link": null
+        },
+        {
+          "name": "md",
+          "type": "BOOLEAN",
+          "label": "Сохранить MD",
+          "localized_name": "Сохранить MD",
+          "widget": {
+            "name": "md"
+          },
+          "link": null
+        },
+        {
+          "name": "name",
+          "type": "STRING",
+          "label": "Имя результата",
+          "localized_name": "Имя результата",
+          "widget": {
+            "name": "name"
+          },
+          "link": null
+        },
+        {
+          "name": "include_datetime",
+          "type": "BOOLEAN",
+          "label": "Дата и время в имени",
+          "localized_name": "Дата и время в имени",
+          "widget": {
+            "name": "include_datetime"
+          },
+          "link": null
+        },
+        {
+          "name": "directory",
+          "type": "STRING",
+          "label": "Каталог результатов",
+          "localized_name": "Каталог результатов",
+          "widget": {
+            "name": "directory"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Настройки сохранения",
+          "type": "DSN_TEXT_SAVE",
+          "label": "Настройки сохранения",
+          "localized_name": "Настройки сохранения",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DSNTextResultSetup"
+      },
+      "widgets_values": [
+        false,
+        false,
+        "",
+        true,
+        ""
+      ]
+    },
+    {
+      "id": 5,
+      "type": "DSNTextGenerate",
+      "pos": [
+        830,
+        195
+      ],
+      "size": [
+        335,
+        195
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "name": "request",
+          "type": "DSN_TEXT_REQUEST",
+          "label": "Настройки запроса",
+          "localized_name": "Настройки запроса",
+          "link": 1
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "label": "Промпт",
+          "localized_name": "Промпт",
+          "link": 2
+        },
+        {
+          "name": "materials",
+          "type": "STRING",
+          "label": "Материалы",
+          "localized_name": "Материалы",
+          "link": 3
+        },
+        {
+          "name": "save",
+          "type": "DSN_TEXT_SAVE",
+          "label": "Настройки сохранения",
+          "localized_name": "Настройки сохранения",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Текст",
+          "type": "STRING",
+          "label": "Текст",
+          "localized_name": "Текст",
+          "links": null
+        },
+        {
+          "name": "Причина завершения",
+          "type": "STRING",
+          "label": "Причина завершения",
+          "localized_name": "Причина завершения",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DSNTextGenerate"
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      5,
+      0,
+      "DSN_TEXT_REQUEST"
+    ],
+    [
+      2,
+      2,
+      0,
+      5,
+      1,
+      "STRING"
+    ],
+    [
+      3,
+      3,
+      0,
+      5,
+      2,
+      "STRING"
+    ],
+    [
+      4,
+      4,
+      0,
+      5,
+      3,
+      "DSN_TEXT_SAVE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.85,
+      "offset": [
+        20,
+        25
+      ]
+    },
+    "linearMode": true,
+    "linearData": {
+      "inputs": [
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:1:profile",
+          "profile"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:1:profile.model",
+          "profile.model"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:1:profile.stop_after",
+          "profile.stop_after"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:2:source",
+          "source"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:2:source.text",
+          "source.text"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:2:source.file",
+          "source.file"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:3:files",
+          "files"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:txt",
+          "txt"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:md",
+          "md"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:name",
+          "name"
+        ],
+        [
+          "5fc7f814-16f0-4bee-990c-470ba33e7df6:4:include_datetime",
+          "include_datetime"
+        ]
+      ],
+      "outputs": [
+        5
+      ]
+    }
+  },
+  "version": 0.4,
+  "definitions": {
+    "subgraphs": [
+      {
+        "id": "fe86fac1-a306-4f6b-9e28-b8dd47d8f6b0",
+        "version": 1,
+        "state": {
+          "lastGroupId": 0,
+          "lastNodeId": 1,
+          "lastLinkId": 3,
+          "lastRerouteId": 0
+        },
+        "revision": 0,
+        "config": {},
+        "name": "Text Context",
+        "inputNode": {
+          "id": -10,
+          "bounding": [
+            0,
+            70,
+            165,
+            85
+          ]
+        },
+        "outputNode": {
+          "id": -20,
+          "bounding": [
+            640,
+            70,
+            135,
+            60
+          ]
+        },
+        "inputs": [
+          {
+            "id": "075ac676-4547-496c-aae4-02bb3f94af6c",
+            "name": "source",
+            "label": "Исходный текст",
+            "type": "STRING",
+            "linkIds": [
+              1
+            ],
+            "pos": [
+              147,
+              90
+            ]
+          },
+          {
+            "id": "f5e0883d-c722-40af-b447-22a0fa538ab3",
+            "name": "files",
+            "label": "Файлы",
+            "type": "STRING",
+            "linkIds": [
+              2
+            ],
+            "pos": [
+              147,
+              115
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "id": "f74658fb-8449-4afe-9b91-42351c3f6e3f",
+            "name": "materials",
+            "label": "Материалы",
+            "type": "STRING",
+            "linkIds": [
+              3
+            ],
+            "pos": [
+              660,
+              90
+            ]
+          }
+        ],
+        "widgets": [],
+        "nodes": [
+          {
+            "id": 1,
+            "type": "DSNTextCollect",
+            "pos": [
+              205,
+              60
+            ],
+            "size": [
+              390,
+              180
+            ],
+            "flags": {},
+            "order": 0,
+            "mode": 0,
+            "showAdvanced": false,
+            "inputs": [
+              {
+                "name": "source",
+                "type": "STRING",
+                "label": "Исходный текст",
+                "localized_name": "Исходный текст",
+                "link": 1
+              },
+              {
+                "name": "files",
+                "type": "STRING",
+                "label": "Файлы",
+                "localized_name": "Файлы",
+                "widget": {
+                  "name": "files"
+                },
+                "link": 2
+              }
+            ],
+            "outputs": [
+              {
+                "name": "Материалы",
+                "type": "STRING",
+                "label": "Материалы",
+                "localized_name": "Материалы",
+                "links": [
+                  3
+                ]
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "DSNTextCollect"
+            },
+            "widgets_values": [
+              ""
+            ]
+          }
+        ],
+        "groups": [],
+        "links": [
+          {
+            "id": 1,
+            "origin_id": -10,
+            "origin_slot": 0,
+            "target_id": 1,
+            "target_slot": 0,
+            "type": "STRING"
+          },
+          {
+            "id": 2,
+            "origin_id": -10,
+            "origin_slot": 1,
+            "target_id": 1,
+            "target_slot": 1,
+            "type": "STRING"
+          },
+          {
+            "id": 3,
+            "origin_id": 1,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 0,
+            "type": "STRING"
+          }
+        ],
+        "extra": {
+          "workflowRendererVersion": "LG"
+        }
+      }
+    ]
+  }
+}
