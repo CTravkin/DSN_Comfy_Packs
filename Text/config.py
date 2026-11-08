@@ -24,6 +24,7 @@ class Server:
 
 @dataclass(frozen=True)
 class Config:
+    root: Path
     prompts: Path
     servers: dict[str, Server]
     models: dict[str, str]
@@ -36,7 +37,7 @@ def load_config(path: Path | None = None) -> Config:
     path = (path or Path(configured or '~/.dsn-comfy/text/config.json')).expanduser().resolve()
     catalog = path.parent / 'text-model-catalog'
     if not explicit and not path.is_file():
-        return Config(path.parent / 'Prompts', {}, {}, catalog)
+        return Config(path.parent, path.parent / 'Prompts', {}, {}, catalog)
     try:
         data = json.loads(path.read_text(encoding='utf-8-sig'))
         root = (path.parent / data.get('root', '.')).resolve()
@@ -75,6 +76,6 @@ def load_config(path: Path | None = None) -> Config:
             if not isinstance(key_env, str):
                 raise ValueError(f'Некорректное имя переменной ключа для {name}')
             servers[name] = Server(name, url, available, temperature, tokens, timeout, startup, key_env, tuple(launch))
-        return Config(prompts, servers, models, catalog)
+        return Config(root, prompts, servers, models, catalog)
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise ValueError(f'Не удалось прочитать конфигурацию Text ({path.name}): {error}') from None

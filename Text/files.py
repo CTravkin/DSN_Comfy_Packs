@@ -8,28 +8,32 @@ PROMPT_FORMATS = {'.txt', '.md'}
 MATERIAL_FORMATS = PROMPT_FORMATS | {'.json', '.csv'}
 
 
-def read_text(root: Path, name: str, formats: set[str]) -> str:
+def resolve_path(root: Path, value: str) -> Path:
     root = root.resolve()
-    relative = Path(name.strip().strip('"'))
-    path = (root / relative).resolve()
-    if relative.anchor or not path.is_relative_to(root) or path.suffix.lower() not in formats:
-        raise ValueError('Укажите относительный путь к файлу поддерживаемого формата')
+    entered = Path(value.strip().strip('"')).expanduser()
+    if entered.is_absolute():
+        return entered.resolve()
+    if entered.anchor:
+        raise ValueError('Укажите полный путь или путь от корня рабочей папки')
+    path = (root / entered).resolve()
+    if not path.is_relative_to(root):
+        raise ValueError('Для пути за пределами рабочей папки укажите полный путь')
+    return path
+
+
+def read_text(root: Path, name: str, formats: set[str], *, prompts: Path | None = None) -> str:
+    path = resolve_path(root, name)
+    entered = Path(name.strip().strip('"'))
+    if prompts is not None and not path.exists() and not entered.anchor and len(entered.parts) == 1:
+        path = resolve_path(prompts, name)
+    if path.suffix.lower() not in formats:
+        raise ValueError(f'Поддерживаемые форматы: {", ".join(ext[1:].upper() for ext in sorted(formats))}')
     if not path.is_file():
-        raise ValueError(f'Файл не найден: {relative.name}')
+        raise ValueError(f'Файл не найден: {entered.name}')
     try:
         return path.read_text(encoding='utf-8-sig')
     except (OSError, UnicodeError):
-        raise ValueError(f'Не удалось прочитать файл UTF-8: {relative.name}') from None
-
-
-def list_material_files(root: Path) -> list[str]:
-    root = root.resolve()
-    return sorted((
-        path.relative_to(root).as_posix()
-        for path in root.rglob('*')
-        if path.suffix.lower() in MATERIAL_FORMATS and path.is_file()
-        and path.resolve().is_relative_to(root)
-    ), key=str.casefold)
+        raise ValueError(f'Не удалось прочитать файл UTF-8: {entered.name}') from None
 
 
 def collect_text(root: Path, file_list: str | list[str], source: str) -> str:

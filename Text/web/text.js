@@ -1,5 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
+import { installAppHelp } from "./app-help.js";
+import { currentResult, installResults, resetResults, showNodeResult } from "./results.js";
 
 const labels = {
     "profile.model": "Модель",
@@ -13,15 +15,9 @@ const labels = {
 };
 const dynamicNodes = { DSNTextRequestSetup: "profile", DSNTextPrompt: "source", DSNTextContext: "files" };
 const resultFields = ["directory", "name", "include_datetime", "txt", "md"];
-const textNodes = new Set([...Object.keys(dynamicNodes), "DSNTextResultSetup", "DSNTextGenerate"]);
+const textNodes = new Set([...Object.keys(dynamicNodes), "DSNTextResultSetup", "DSNTextGenerate", "DSNTextCollect"]);
 const inputSpecs = new Map();
 const resultType = "DSNTextGenerate";
-const panelSelector = '[data-testid="linear-center-panel"]';
-let viewKey = crypto.randomUUID();
-let appResult;
-let resultPanel;
-let resultCard;
-
 function migrateResultFields(graph) {
     for (const node of graph.nodes ?? []) {
         if (node.type !== "DSNTextResultSetup" || !Array.isArray(node.inputs)) continue;
@@ -54,6 +50,50 @@ function inputTooltip(type, name) {
     }
 }
 
+function appWidgetTooltip(key) {
+    const graph = app.rootGraph;
+    if (!key || !graph) return;
+    const parts = key.split(":");
+    if (parts.length !== 3 || parts[0] !== graph.id) return;
+    return inputTooltip(graph.getNodeById(parts[1])?.type, parts[2]);
+}
+
+function migrateContextSlots(graph) {
+    for (const node of graph.nodes ?? []) {
+        if (node.type !== "DSNTextContext") continue;
+        for (const slot of node.inputs ?? []) {
+            if (slot.type === "COMBO" && /^files\.file_\d+$/.test(slot.name)) slot.type = "STRING";
+        }
+    }
+    for (const subgraph of graph.definitions?.subgraphs ?? []) migrateContextSlots(subgraph);
+}
+
+function installNodeLayout() {
+    const canvas = app.canvasContainer;
+    if (!canvas) return;
+    const body = '[data-dsn-text-node]:not([data-collapsed]) [data-testid^="node-body-"]';
+    const slots = `${body} > .justify-between:first-child`;
+    const style = document.createElement("style");
+    style.textContent = `
+        ${slots} { display: contents }
+        ${slots} > :not(.ml-auto) { order: -2 }
+        ${slots} > .ml-auto { order: 1 }
+        ${body} > .mt-auto { order: 101 }
+        ${body} > [data-testid="node-widgets"] { grid-template-rows: none !important; align-content: start }
+    `;
+    document.head.append(style);
+    function markNodes() {
+        const graph = app.canvas?.graph;
+        for (const element of canvas.querySelectorAll(".lg-node[data-node-id]")) {
+            element.toggleAttribute("data-dsn-text-node", textNodes.has(graph?.getNodeById(element.dataset.nodeId)?.type));
+        }
+    }
+    new MutationObserver(markNodes).observe(canvas, {
+        subtree: true, childList: true, attributes: true, attributeFilter: ["data-node-id"],
+    });
+    markNodes();
+}
+
 async function catalog() {
     const response = await api.fetchApi("/text/models");
     return response.ok ? await response.json() : [];
@@ -69,75 +109,12 @@ function labelFields(node) {
     }
 }
 
-function resultContent(container, message, showPreview = false) {
-    const title = document.createElement("strong");
-    title.textContent = message.text?.[0] ?? "Текст готов";
-    container.replaceChildren(title);
-    const [, directory, names, preview] = message.dsn_text_result;
-    if (showPreview && preview) {
-        const paragraph = document.createElement("div");
-        paragraph.className = "my-2 max-h-40 overflow-auto whitespace-pre-wrap break-words select-text";
-        paragraph.textContent = preview;
-        container.append(paragraph);
-    }
-    if (!directory) return;
-    const path = document.createElement("div");
-    path.textContent = directory;
-    path.className = "break-all text-muted-foreground";
-    container.append(path);
-    const files = (message.files ?? []).filter(file => file.type === "output");
-    if (files.length) {
-        const list = document.createElement("ul");
-        for (const file of files) {
-            const item = document.createElement("li");
-            const link = document.createElement("a");
-            const query = new URLSearchParams({ filename: file.filename, subfolder: file.subfolder, type: file.type });
-            link.href = api.apiURL(`/view?${query}`);
-            link.download = file.filename;
-            link.textContent = file.filename;
-            link.className = "underline";
-            item.append(link);
-            list.append(item);
-        }
-        container.append(list);
-    } else {
-        const note = document.createElement("div");
-        note.textContent = names;
-        container.append(note);
-    }
-}
-
-function updateAppResult() {
-    resultPanel = document.querySelector(panelSelector);
-    resultCard?.remove();
-    resultCard = undefined;
-    if (!resultPanel || !appResult) return;
-    resultCard = document.createElement("section");
-    resultCard.className = "floating-panel mx-auto w-full rounded-lg p-3 text-sm";
-    resultCard.style.marginBlock = "3.25rem 0.5rem";
-    resultCard.style.width = "min(95%, 58rem)";
-    resultContent(resultCard, appResult);
-    resultPanel.prepend(resultCard);
-}
-
 app.registerExtension({
     name: "DSN.Text",
     setup() {
-        const style = document.createElement("style");
-        style.textContent = `
-            [data-dsn-text-help] > [data-testid="app-mode-widget-description"] {
-                height: auto;
-                min-height: 1.25rem;
-                font-size: 0.75rem;
-                line-height: 1rem;
-            }
-            [data-dsn-text-help] > [data-testid="app-mode-widget-description"] .truncate {
-                overflow: visible;
-                text-overflow: clip;
-                white-space: normal;
-            }
-        `;
-        document.head.append(style);
+        installAppHelp(appWidgetTooltip);
+        installNodeLayout();
+        installResults();
         const getModels = api.getModels.bind(api);
         api.getModels = async (category, ...args) => category === "Text"
             ? (await catalog()).map(model => ({ name: model.filename, pathIndex: 0 }))
@@ -146,50 +123,12 @@ app.registerExtension({
         api.viewMetadata = async (category, filename, ...args) => category === "Text"
             ? (await catalog()).find(model => model.filename === filename)?.metadata ?? null
             : viewMetadata(category, filename, ...args);
-        const queuePrompt = api.queuePrompt;
-        api.queuePrompt = function(number, prompt, ...args) {
-            if (prompt.workflow && Object.values(prompt.output ?? {}).some(node => node.class_type === resultType)) {
-                const workflow = { ...prompt.workflow, extra: { ...prompt.workflow.extra, dsn_text_view: viewKey } };
-                prompt = { ...prompt, workflow };
-            }
-            return queuePrompt.call(this, number, prompt, ...args);
-        };
-        api.addEventListener("executed", ({ detail }) => {
-            if (detail.output?.dsn_text_result?.[0] !== viewKey) return;
-            const selected = app.rootGraph?.extra?.linearData?.outputs ?? [];
-            if (selected.map(String).includes(String(detail.display_node ?? detail.node))) {
-                appResult = detail.output;
-                updateAppResult();
-            }
-        });
-        new MutationObserver(() => {
-            if (document.querySelector(panelSelector) !== resultPanel) updateAppResult();
-            for (const row of document.querySelectorAll('[data-testid="app-mode-widget-item"]')) {
-                const parts = (row.dataset.widgetKey ?? "").split(":");
-                const node = app.rootGraph?.getNodeById?.(parts[1]);
-                row.toggleAttribute("data-dsn-text-help", textNodes.has(node?.type));
-            }
-        }).observe(document.body, {
-            childList: true, subtree: true, attributes: true, attributeFilter: ["data-widget-key"],
-        });
     },
     beforeConfigureGraph(graph) {
         migrateResultFields(graph);
-        const nodes = new Map((graph.nodes ?? []).map(node => [String(node.id), node.type]));
-        for (const entry of graph.extra?.linearData?.inputs ?? []) {
-            if (!Array.isArray(entry)) continue;
-            const [key, name, config] = entry;
-            const parts = String(key).split(":");
-            const id = parts.length === 1 ? parts[0] : parts[1];
-            const tooltip = inputTooltip(nodes.get(id), name);
-            if (tooltip) entry[2] = { ...config, description: tooltip };
-        }
+        migrateContextSlots(graph);
     },
-    afterConfigureGraph() {
-        viewKey = crypto.randomUUID();
-        appResult = undefined;
-        updateAppResult();
-    },
+    afterConfigureGraph: resetResults,
     beforeRegisterNodeDef(nodeType, nodeData) {
         if (textNodes.has(nodeData.name)) {
             inputSpecs.set(nodeData.name, { ...nodeData.input.required, ...nodeData.input.optional });
@@ -223,15 +162,8 @@ app.registerExtension({
             const onExecuted = nodeType.prototype.onExecuted;
             nodeType.prototype.onExecuted = function(message) {
                 onExecuted?.call(this, message);
-                if (message?.dsn_text_result?.[0] !== viewKey || !this.addDOMWidget) return;
-                if (!this.dsnTextResult) {
-                    this.dsnTextResult = document.createElement("div");
-                    this.dsnTextResult.className = "p-2 text-sm";
-                    this.addDOMWidget("Результат", "dsn-text-result", this.dsnTextResult,
-                                      { serialize: false, hideOnZoom: true });
-                }
-                resultContent(this.dsnTextResult, message, true);
-                this.setDirtyCanvas(true, true);
+                const result = currentResult(message);
+                if (result) showNodeResult(this, result);
             };
         }
     },

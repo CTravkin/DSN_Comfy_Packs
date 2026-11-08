@@ -1,22 +1,20 @@
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
-from uuid import uuid4
-
 import folder_paths
 from comfy.model_management import throw_exception_if_processing_interrupted
-from comfy_api.latest import io, ui
+from comfy_api.latest import io
 
 from .client import Request, generate
 from .config import load_config
-from .files import PROMPT_FORMATS, ResultSettings, collect_text, export_text, list_material_files, read_text
+from .files import PROMPT_FORMATS, ResultSettings, collect_text, export_text, read_text, resolve_path
+from .results import presentation
 
 
 RequestOptions = io.Custom('DSN_TEXT_REQUEST')
 SaveOptions = io.Custom('DSN_TEXT_SAVE')
 NO_SERVER = 'Серверы не настроены'
 NO_MODEL = 'Нет моделей'
-NO_FILE = 'Не выбран'
 FILE_COUNTS = ['Без файлов', '1 файл', '2 файла', '3 файла', '4 файла',
                '5 файлов', '6 файлов', '7 файлов', '8 файлов']
 
@@ -37,9 +35,9 @@ class RequestSetup(io.ComfyNode):
         options = [
             io.DynamicCombo.Option(server.name, [
                 io.Combo.Input('model', list(server.models), display_name='Модель',
-                               tooltip='Модели, указанные для выбранного сервера в конфигурации пакета Text'),
+                               tooltip='Модели, указанные для выбранного сервера в конфигурации'),
                 toggle('stop_after', 'Остановить после запроса',
-                       tooltip='После запроса останавливается только сервер, запущенный пакетом Text'),
+                       tooltip='После запроса останавливается только сервер, запущенный этим пакетом'),
                 io.Float.Input('temperature', display_name='Температура', default=server.temperature,
                                min=0, max=2, step=0.01, advanced=True,
                                tooltip='Низкие значения делают ответ более предсказуемым, высокие — более разнообразным'),
@@ -81,14 +79,15 @@ class Prompt(io.ComfyNode):
                     tooltip='Задание и требования к ответу модели')]),
                 io.DynamicCombo.Option('Файл', [io.String.Input(
                     'file', display_name='Файл промпта', default='',
-                    tooltip='Относительный путь к файлу TXT или MD в каталоге промптов пакета Text')]),
+                    tooltip='Полный путь к TXT или MD либо путь от корня рабочей папки')]),
             ], display_name='Источник', tooltip='Способ задания промпта: текст в поле или содержимое файла'),
         ], outputs=[io.String.Output('prompt', display_name='Промпт')])
 
     @staticmethod
     def _read(source):
         if source['source'] == 'Файл':
-            return read_text(load_config().prompts, source['file'], PROMPT_FORMATS)
+            config = load_config()
+            return read_text(config.root, source['file'], PROMPT_FORMATS, prompts=config.prompts)
         return source['text']
 
     @classmethod
@@ -110,26 +109,25 @@ class CollectText(io.ComfyNode):
             io.String.Input('source', display_name='Исходный текст', optional=True, force_input=True,
                             tooltip='Дополнительный текст из графа'),
             io.String.Input('files', display_name='Файлы', default='', multiline=True,
-                            tooltip='Относительные пути к файлам в общей папке Input, по одному на строку'),
+                            tooltip='Полные пути или пути от корня рабочей папки, по одному на строку'),
         ], outputs=[io.String.Output('materials', display_name='Материалы')])
 
     @classmethod
     def fingerprint_inputs(cls, files='', **kwargs):
-        return digest(collect_text(Path(folder_paths.get_input_directory()), files, ''))
+        return digest(collect_text(load_config().root, files, ''))
 
     @classmethod
     def execute(cls, files='', source=''):
-        return io.NodeOutput(collect_text(Path(folder_paths.get_input_directory()), files, source))
+        return io.NodeOutput(collect_text(load_config().root, files, source))
 
 
 class TextContext(io.ComfyNode):
     @classmethod
     def define_schema(cls):
-        options = [NO_FILE, *list_material_files(Path(folder_paths.get_input_directory()))]
         counts = [
             io.DynamicCombo.Option(label, [
-                io.Combo.Input(f'file_{index}', options, display_name=f'Файл {index}', default=NO_FILE,
-                               tooltip='Файл TXT, MD, JSON или CSV из общей папки Input Comfy')
+                io.String.Input(f'file_{index}', display_name=f'Файл {index}', default='',
+                                tooltip='Полный путь к TXT, MD, JSON или CSV либо путь от корня рабочей папки')
                 for index in range(1, count + 1)
             ]) for count, label in enumerate(FILE_COUNTS)
         ]
@@ -138,9 +136,9 @@ class TextContext(io.ComfyNode):
             description='Объединяет исходный текст и содержимое выбранных файлов в материалы для Generate Text.',
             inputs=[
                 io.String.Input('source', display_name='Исходный текст', optional=True, force_input=True,
-                                tooltip='Текст из графа перед выбранными файлами'),
+                                tooltip='Текст из графа, который передается перед содержимым файлов'),
                 io.DynamicCombo.Input('files', counts, display_name='Количество файлов',
-                                      tooltip='Открывает поля выбора файлов из общей папки Input. Материалы передаются по порядку полей'),
+                                      tooltip='Материалы передаются в порядке указанных путей, пустые поля пропускаются'),
             ],
             outputs=[io.String.Output('materials', display_name='Материалы')],
         )
@@ -148,7 +146,7 @@ class TextContext(io.ComfyNode):
     @staticmethod
     def _read(files, source):
         names = [files.get(f'file_{index}') for index in range(1, len(FILE_COUNTS))]
-        return collect_text(Path(folder_paths.get_input_directory()), [name for name in names if name and name != NO_FILE], source)
+        return collect_text(load_config().root, [name for name in names if name and name != 'Не выбран'], source)
 
     @classmethod
     def fingerprint_inputs(cls, files, **kwargs):
@@ -164,50 +162,20 @@ class ResultSetup(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(node_id='DSNTextResultSetup', display_name='Result Setup', category='Text', inputs=[
             io.String.Input('directory', display_name='Каталог результатов', default='', advanced=True,
-                            tooltip='Каталог для папок запуска. Пустое поле использует общий Output Comfy'),
+                            tooltip='Полный путь или путь от корня рабочей папки; пустое поле означает Output Comfy'),
             io.String.Input('name', display_name='Имя результата', default='',
-                            tooltip='Общее имя папки запуска и файлов. При совпадении имени файлы добавляются в существующую папку'),
+                            tooltip='Общее имя папки и файлов; при совпадении файлы добавляются в существующую папку'),
             toggle('include_datetime', 'Дата и время в имени', True,
                    tooltip='Добавляет дату и время запуска к имени папки и файлов'),
-            toggle('txt', 'Сохранить TXT', True, tooltip='Сохраняет ответ в текстовый файл .txt'),
-            toggle('md', 'Сохранить MD', True, tooltip='Сохраняет ответ в файл Markdown .md'),
+            toggle('txt', 'Сохранить TXT', True, tooltip='Текстовый файл в каталоге результатов'),
+            toggle('md', 'Сохранить MD', True, tooltip='Файл Markdown в каталоге результатов'),
         ], outputs=[SaveOptions.Output('save', display_name='Настройки сохранения')])
 
     @classmethod
     def execute(cls, directory='', name='', include_datetime=True, txt=True, md=True):
-        output = Path(folder_paths.get_output_directory()).resolve()
-        path = Path(directory.strip().strip('"')).expanduser()
-        root = (output / path).resolve()
-        if not path.is_absolute() and not root.is_relative_to(output):
-            raise ValueError('Относительный каталог должен находиться в Output Comfy')
+        root = (resolve_path(load_config().root, directory) if directory.strip()
+                else Path(folder_paths.get_output_directory()).resolve())
         return io.NodeOutput(ResultSettings(root, name, include_datetime, txt, md))
-
-
-def saved_file(path, root, kind):
-    relative = path.relative_to(root)
-    return ui.SavedResult(relative.name, relative.parent.as_posix() if relative.parent.parts else '', kind)
-
-
-def presentation(text, finish, exports, view_key):
-    output = Path(folder_paths.get_output_directory()).resolve()
-    files = [saved_file(path, output, io.FolderType.output) for path in exports if path.is_relative_to(output)]
-    if not any(file['filename'].lower().endswith('.txt') for file in files):
-        temp = Path(folder_paths.get_temp_directory()).resolve()
-        directory = temp / 'text-preview'
-        directory.mkdir(parents=True, exist_ok=True)
-        if directory.resolve() != directory:
-            raise ValueError('Папка предпросмотра должна быть обычным каталогом')
-        path = directory / f'{uuid4().hex}.txt'
-        with path.open('x', encoding='utf-8', newline='') as stream:
-            stream.write(text)
-        preview = saved_file(path, temp, io.FolderType.temp)
-        preview['display_name'] = 'Предпросмотр'
-        files.insert(0, preview)
-    summary = 'Ответ обрезан' if finish == 'length' else 'Текст готов'
-    return {'text': [summary], 'files': files, 'dsn_text_result': [
-        view_key, str(exports[0].parent) if exports else '', ', '.join(p.name for p in exports),
-        text[:1600] + ('…' if len(text) > 1600 else ''),
-    ]}
 
 
 class GenerateText(io.ComfyNode):

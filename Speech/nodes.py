@@ -62,9 +62,9 @@ class FileSetup(io.ComfyNode):
     @classmethod
     def define_schema(cls):
         return schema('FileSetup', 'File Setup', [
-            io.String.Input('media_path', display_name='Исходный файл', default='', tooltip='Путь к записи или JSON отпечатка для сравнения, исходный файл остается на месте'),
+            io.String.Input('media_path', display_name='Исходный файл', default='', tooltip='Полный путь к записи или JSON отпечатка либо путь от корня рабочей папки'),
             io.String.Input('output_directory', display_name='Каталог результатов', default='', advanced=True,
-                            tooltip='Родительский каталог папки запуска, пустое поле означает Output Comfy'),
+                            tooltip='Полный путь или путь от корня рабочей папки; пустое поле означает Output Comfy'),
             io.String.Input('name', display_name='Имя результата', default='', tooltip='Общее имя папки и основных файлов, при совпадении имени файла добавляется номер'),
             boolean('include_datetime', 'Дата и время в имени', True,
                     tooltip='Дата и время добавляются к имени папки запуска и основных файлов'),

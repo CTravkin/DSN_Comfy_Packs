@@ -87,10 +87,10 @@ def read_result(path: Path, context: Files | None = None, *, model: Model | None
     return data
 
 
-def reuse(existing_json: str, context: Files, model: Model, stage: Path) -> Path | None:
+def reuse(existing_json: str, context: Files, model: Model, stage: Path, *, root: Path = AI_ROOT) -> Path | None:
     if not existing_json.strip():
         return None
-    source = read_path(existing_json)
+    source = read_path(existing_json, root)
     read_result(source, context, model=model)
     target = stage / source.name
     shutil.copyfile(source, target)
@@ -103,7 +103,7 @@ def whisper(context: Files, model: Model, *, language='auto', task='transcribe',
     if task not in model.manifest.get('tasks', ['transcribe']):
         raise ValueError('Выбранная модель не поддерживает эту задачу; список задач задан в manifest')
     stage = context.stage('recognition')
-    result_path = reuse(existing_json, context, model, stage)
+    result_path = reuse(existing_json, context, model, stage, root=ai_root)
     if result_path:
         data = read_result(result_path, context, model=model)
         options = data.get('recognition_options', {})
@@ -148,7 +148,7 @@ def whisper(context: Files, model: Model, *, language='auto', task='transcribe',
 def diarize(context: Files, model: Model, *, device='auto', speakers=0, min_speakers=0,
             max_speakers=0, rttm=False, existing_json='', ai_root=AI_ROOT, cancel_check=None):
     stage = context.stage('diarization')
-    result_path = reuse(existing_json, context, model, stage)
+    result_path = reuse(existing_json, context, model, stage, root=ai_root)
     parameters = {key: value for key, value in [('num_speakers', speakers), ('min_speakers', min_speakers), ('max_speakers', max_speakers)] if value}
     if result_path:
         data = read_result(result_path, context, model=model)
@@ -194,7 +194,7 @@ def extract(context: Files, model: Model, *, start=0.0, end=0.0, device='auto', 
 def compare(context: Files, left: str, right: str, *, ai_root=AI_ROOT, cancel_check=None):
     stage = context.stage('comparison')
     result = stage / 'comparison.json'
-    invoke('Voiceprint', ['compare', '--left', str(read_path(left)), '--right', str(read_path(right)),
+    invoke('Voiceprint', ['compare', '--left', str(read_path(left, ai_root)), '--right', str(read_path(right, ai_root)),
                          '--output-json', str(result)], ai_root=ai_root, cancel_check=cancel_check)
     data = read_result(result)
     return str(publish(context, result, '.comparison.json')), float(data['cosine_similarity'])
@@ -202,11 +202,12 @@ def compare(context: Files, left: str, right: str, *, ai_root=AI_ROOT, cancel_ch
 
 def identify(context: Files, model: Model, diarization_json: str, reference_root: str, *, device='auto',
              threshold=0.25, minimum_margin=0.05, ai_root=AI_ROOT, cancel_check=None):
-    read_result(read_path(diarization_json), context)
-    references = read_path(reference_root) if reference_root.strip() else ai_root / 'Data' / 'Speakers'
+    diarization = read_path(diarization_json, ai_root)
+    read_result(diarization, context)
+    references = read_path(reference_root, ai_root) if reference_root.strip() else ai_root / 'Data' / 'Speakers'
     stage = context.stage('identification')
     result = stage / 'identification.json'
-    invoke('Voiceprint', ['identify', '--input', str(context.source), '--diarization-json', str(read_path(diarization_json)),
+    invoke('Voiceprint', ['identify', '--input', str(context.source), '--diarization-json', str(diarization),
                          '--reference-root', str(references), '--output-json', str(result),
                          '--model', str(model.path), '--device', device, '--threshold', str(threshold),
                          '--minimum-margin', str(minimum_margin),
@@ -217,15 +218,16 @@ def identify(context: Files, model: Model, diarization_json: str, reference_root
 
 def transcript(context: Files, recognition_json: str, diarization_json: str, *, speaker_map='', confirmed=False,
                save_json=True, save_text=True, max_gap=1.0, ai_root=AI_ROOT, cancel_check=None):
-    for path in (recognition_json, diarization_json):
-        read_result(read_path(path), context)
+    recognition, diarization = (read_path(path, ai_root) for path in (recognition_json, diarization_json))
+    for path in (recognition, diarization):
+        read_result(path, context)
     stage = context.stage('transcript')
     result = stage / 'transcript.json'
     text_file = stage / 'transcript.txt'
-    arguments = ['--transcript-json', str(read_path(recognition_json)), '--diarization-json', str(read_path(diarization_json)),
+    arguments = ['--transcript-json', str(recognition), '--diarization-json', str(diarization),
                  '--output-json', str(result), '--output-txt', str(text_file), '--max-gap', str(max_gap)]
     if speaker_map.strip():
-        arguments += ['--speaker-map-json', str(read_path(speaker_map))]
+        arguments += ['--speaker-map-json', str(read_path(speaker_map, ai_root))]
     if confirmed:
         arguments += ['--speaker-map-confirmed']
     invoke('SpeakerTranscript', arguments, ai_root=ai_root, cancel_check=cancel_check)

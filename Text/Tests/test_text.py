@@ -30,17 +30,16 @@ class TextTests(unittest.TestCase):
             self.assertEqual(config.prompts, Path(tmp).resolve() / 'templates')
 
     def test_materials_keep_file_order_and_reject_folders_and_escape(self):
-        from Text.files import collect_text, list_material_files
+        from Text.files import collect_text, resolve_path
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / 'table.csv').write_text('имя,сумма\nтест,1', encoding='utf-8-sig')
             (root / 'note.md').write_text('Заметка', encoding='utf-8')
             (root / 'other.pdf').touch()
-            (root / 'nested').mkdir()
-            (root / 'nested/data.JSON').write_text('{}', encoding='utf-8')
-            self.assertEqual(list_material_files(root), ['nested/data.JSON', 'note.md', 'table.csv'])
-            self.assertEqual(collect_text(root, ['table.csv', 'note.md'], 'Транскрипт'),
+            (root / 'work').mkdir()
+            self.assertEqual(resolve_path(root / 'work', str(root / 'note.md')), (root / 'note.md').resolve())
+            self.assertEqual(collect_text(root, ['table.csv', str(root / 'note.md')], 'Транскрипт'),
                              'Транскрипт\n\n## table.csv\n\nимя,сумма\nтест,1\n\n## note.md\n\nЗаметка')
             self.assertEqual(collect_text(root, 'table.csv\nnote.md', 'Транскрипт'),
                              'Транскрипт\n\n## table.csv\n\nимя,сумма\nтест,1\n\n## note.md\n\nЗаметка')

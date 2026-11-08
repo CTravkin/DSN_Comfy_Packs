@@ -40,6 +40,14 @@ class SpeechTests(unittest.TestCase):
     def setup_files(self, **kwargs):
         return self.files.setup_files(str(self.media), str(self.root / 'Output'), now=self.now, **kwargs)
 
+    def test_file_setup_resolves_paths_from_working_root(self):
+        for source, output in ((self.media.name, 'Результаты'), (str(self.media), str(self.root / 'Результаты'))):
+            context = self.files.setup_files(source, output, 'Проверка', False, root=self.root)
+            self.assertEqual(context.source, self.media.resolve())
+            self.assertEqual(context.directory, self.root.resolve() / 'Результаты' / 'Проверка')
+        with self.assertRaisesRegex(ValueError, 'за пределами'):
+            self.files.read_path('../другая запись.wav', self.root)
+
     def test_timestamp_and_name_are_shared_by_folder_and_export(self):
         context = self.setup_files(name='Обсуждение сметы', include_datetime=True)
         self.assertEqual(context.name, '2026-11-05 10-50 Обсуждение сметы')
