@@ -33,7 +33,8 @@ def _saved_file(path, root, kind):
         return ui.SavedResult(relative.name, relative.parent.as_posix() if relative.parent.parts else '', kind)
 
 
-def presentation(text, finish, exports, view_key):
+def presentation(completion, exports, view_key):
+    text = completion.text
     output = Path(folder_paths.get_output_directory()).resolve()
     published = [{'name': path.name, 'file': _saved_file(path, output, io.FolderType.output)} for path in exports]
     files = [entry['file'] for entry in published if entry['file'] is not None]
@@ -56,7 +57,9 @@ def presentation(text, finish, exports, view_key):
         'exports': published,
         'folder_token': _folder_token(directory) if directory else None,
         'preview': text,
-        'detail': 'Достигнут лимит токенов ответа' if finish == 'length' else '',
+        'detail': 'Достигнут лимит генерации, ответ может быть неполным.' if completion.finish_reason == 'length' else '',
+        'prompt_tokens': completion.prompt_tokens,
+        'completion_tokens': completion.completion_tokens,
     }
     return {'files': files, 'dsn_text_result': [json.dumps(result, ensure_ascii=False)]}
 

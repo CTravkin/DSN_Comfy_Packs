@@ -7,6 +7,9 @@ const nodeWidgets = new WeakMap();
 const pending = new Map();
 const earlyCompletion = new Map();
 const resultType = "DSNTextGenerate";
+const tokenNumber = new Intl.NumberFormat("ru-RU");
+const tokenPlural = new Intl.PluralRules("ru-RU");
+const tokenForms = { one: "токен", few: "токена", many: "токенов", other: "токенов" };
 let submitting = 0;
 let viewKey;
 let panel;
@@ -50,6 +53,20 @@ function resultActions(result, inApp) {
     const heading = element("h3", "Результат");
     heading.className = "text-result-heading";
     section.append(heading);
+    if (result.error || result.detail) {
+        const note = element("p", result.error || result.detail);
+        if (result.error) {
+            note.className = "text-destructive text-result-error";
+            note.setAttribute("role", "alert");
+        }
+        section.append(note);
+    }
+    for (const [label, count] of [["Промпт", result.prompt_tokens], ["Ответ", result.completion_tokens]]) {
+        if (count == null) continue;
+        const line = element("p", `${label} — ${tokenNumber.format(count)} ${tokenForms[tokenPlural.select(count)]}`);
+        line.className = "text-muted-foreground";
+        section.append(line);
+    }
     if (result.exports?.length) {
         const folder = element("div", result.directory);
         folder.className = "text-result-path";
@@ -84,14 +101,6 @@ function resultActions(result, inApp) {
         });
         section.append(button, status);
     }
-    if (result.error || result.detail) {
-        const note = element("p", result.error || result.detail);
-        if (result.error) {
-            note.className = "text-destructive text-result-error";
-            note.setAttribute("role", "alert");
-        }
-        section.append(note);
-    }
     if (!inApp && result.preview) {
         const preview = element("div", result.preview);
         preview.className = "text-result-preview";
@@ -104,7 +113,8 @@ function renderApp() {
     panel = document.querySelector(panelSelector);
     card?.remove();
     card = undefined;
-    if (panel && (appResult?.error || appResult?.exports?.length)) {
+    if (panel && (appResult?.error || appResult?.detail || appResult?.exports?.length
+        || appResult?.prompt_tokens != null || appResult?.completion_tokens != null)) {
         card = resultActions(appResult, true);
         panel.prepend(card);
     }
