@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -73,11 +73,58 @@ class TextTests(unittest.TestCase):
             ]
             with patch('Text.client.stop_process', new_callable=AsyncMock) as stop:
                 result = asyncio.run(generate(Request(server, 'gemma', 0.2, 32, True), 'Промпт'))
-                self.assertEqual(result, ('Ответ', 'length'))
+                self.assertEqual((result.text, result.finish_reason), ('Ответ', 'length'))
+                self.assertIsNone(result.prompt_tokens)
+                self.assertIsNone(result.completion_tokens)
                 self.assertEqual(fetch.call_args.kwargs['payload']['messages'], [{'role': 'user', 'content': 'Промпт'}])
                 stop.assert_not_called()
             with self.assertRaisesRegex(RuntimeError, 'missing'):
                 asyncio.run(generate(Request(server, 'missing', 0.2, 32, False), 'Промпт'))
+
+    def test_generate_keeps_optional_token_counts(self):
+        from Text.client import Request, generate
+        from Text.config import Server
+
+        server = Server('Проверка', 'http://127.0.0.1:9931/v1', {'Gemma': 'gemma'})
+        for usage, expected in (
+            ({'prompt_tokens': 5812, 'completion_tokens': 1240}, (5812, 1240)),
+            ({'prompt_tokens': 0}, (0, None)),
+            ({'prompt_tokens': True, 'completion_tokens': -1}, (None, None)),
+            ([], (None, None)),
+        ):
+            with self.subTest(usage=usage), patch('Text.client.fetch_json', new_callable=AsyncMock) as fetch:
+                fetch.side_effect = [
+                    {'data': [{'id': 'gemma'}]},
+                    {'choices': [{'message': {'content': 'Ответ'}, 'finish_reason': 'stop'}], 'usage': usage},
+                ]
+                result = asyncio.run(generate(Request(server, 'gemma', 0.2, 32), 'Промпт'))
+                counts = (getattr(result, 'prompt_tokens', None), getattr(result, 'completion_tokens', None))
+                self.assertEqual(counts, expected)
+
+    def test_chat_reports_explicit_context_errors(self):
+        import aiohttp
+        from Text.client import fetch_json
+        from Text.config import Server
+
+        server = Server('Проверка', 'http://127.0.0.1:9931/v1', {'Gemma': 'gemma'})
+        session = MagicMock()
+        response = Mock(spec=aiohttp.ClientResponse)
+        session.request.return_value.__aenter__.return_value = response
+        response.status = 400
+        response.raise_for_status.side_effect = aiohttp.ClientResponseError(Mock(), (), status=400)
+
+        for error in ({'type': 'exceed_context_size_error'}, {'code': 'context_length_exceeded'}):
+            with self.subTest(error=error), self.assertRaisesRegex(RuntimeError, 'Запрос превышает доступный контекст'):
+                response.json.return_value = {'error': error}
+                asyncio.run(fetch_json(session, server, '/chat/completions', 1, payload={}))
+
+        response.json.return_value = {'error': {'type': 'invalid_request_error'}}
+        with self.assertRaises(aiohttp.ClientResponseError):
+            asyncio.run(fetch_json(session, server, '/chat/completions', 1, payload={}))
+
+        response.json.side_effect = ValueError('Invalid JSON')
+        with self.assertRaises(aiohttp.ClientResponseError):
+            asyncio.run(fetch_json(session, server, '/chat/completions', 1, payload={}))
 
     def test_missing_key_stops_an_owned_server(self):
         from Text.client import Request, generate

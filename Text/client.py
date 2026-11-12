@@ -21,14 +21,35 @@ class Request:
     stop_after: bool = False
 
 
+@dataclass(frozen=True)
+class Completion:
+    text: str
+    finish_reason: str
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+
+
 _locks: dict[str, Lock] = {}
 _owned: dict[str, subprocess.Popen] = {}
+
+
+async def is_context_error(response):
+    try:
+        body = await response.json(content_type=None)
+    except (ValueError, aiohttp.ClientError):
+        return False
+    error = body.get('error') if isinstance(body, dict) else None
+    return isinstance(error, dict) and (
+        error.get('code') == 'context_length_exceeded' or error.get('type') == 'exceed_context_size_error'
+    )
 
 
 async def fetch_json(session, server, route, timeout, *, payload=None):
     method = 'POST' if payload is not None else 'GET'
     async with session.request(method, server.url + route, json=payload, allow_redirects=False,
                                timeout=aiohttp.ClientTimeout(total=timeout)) as response:
+        if route == '/chat/completions' and response.status == 400 and await is_context_error(response):
+            raise RuntimeError('Запрос превышает доступный контекст. Увеличьте контекст модели или сократите запрос.')
         response.raise_for_status()
         if response.status != 200:
             raise RuntimeError(f'Сервер «{server.name}» вернул HTTP {response.status}')
@@ -107,7 +128,12 @@ async def models_when_ready(session, server, key, check_cancel):
         await asyncio.sleep(0.2)
 
 
-async def generate(request: Request, prompt: str, materials: str = '', *, check_cancel=lambda: None):
+def usage_count(usage, key):
+    count = usage.get(key) if isinstance(usage, dict) else None
+    return count if type(count) is int and count >= 0 else None
+
+
+async def generate(request: Request, prompt: str, materials: str = '', *, check_cancel=lambda: None) -> Completion:
     server = request.server
     key = urlsplit(server.url).netloc.lower()
     lock = _locks.setdefault(key, Lock())
@@ -142,7 +168,9 @@ async def generate(request: Request, prompt: str, materials: str = '', *, check_
                 text = choice['message']['content']
                 if not isinstance(text, str) or not text.strip():
                     raise RuntimeError(f'Сервер «{server.name}» вернул пустой текст')
-                return text, choice['finish_reason'] or 'unknown'
+                usage = response.get('usage')
+                return Completion(text, choice['finish_reason'] or 'unknown',
+                                  usage_count(usage, 'prompt_tokens'), usage_count(usage, 'completion_tokens'))
         except aiohttp.ClientResponseError as error:
             raise RuntimeError(f'Сервер «{server.name}» вернул HTTP {error.status}') from None
         except aiohttp.ClientError:

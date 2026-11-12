@@ -43,7 +43,7 @@ class RequestSetup(io.ComfyNode):
                                tooltip='Низкие значения делают ответ более предсказуемым, высокие — более разнообразным'),
                 io.Int.Input('max_tokens', display_name='Лимит токенов ответа', default=server.max_tokens,
                              min=1, max=262144, advanced=True,
-                             tooltip='Максимальное число токенов, которое модель может сгенерировать для ответа'),
+                             tooltip='Максимальное число токенов для ответа, который должен поместиться в контекст вместе с промптом и материалами'),
             ]) for server in servers.values()
         ]
         if not options:
@@ -194,11 +194,11 @@ class GenerateText(io.ComfyNode):
         if not prompt.strip():
             raise ValueError('Промпт пуст')
         started = datetime.now().astimezone()
-        text, finish = await generate(request, prompt, materials, check_cancel=throw_exception_if_processing_interrupted)
-        exports = export_text(text, save, started) if save else ()
+        completion = await generate(request, prompt, materials, check_cancel=throw_exception_if_processing_interrupted)
+        exports = export_text(completion.text, save, started) if save else ()
         workflow = (cls.hidden.extra_pnginfo or {}).get('workflow') or {}
         view_key = (workflow.get('extra') or {}).get('dsn_text_view', '')
-        return io.NodeOutput(text, finish, ui=presentation(text, finish, exports, view_key))
+        return io.NodeOutput(completion.text, completion.finish_reason, ui=presentation(completion, exports, view_key))
 
 
 NODES = [RequestSetup, Prompt, TextContext, ResultSetup, GenerateText]
